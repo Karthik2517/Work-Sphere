@@ -429,7 +429,7 @@ function AdminDashboard() {
 
       // Calculate total hours and monthly breakdown
       employeeEntries.forEach(entry => {
-        const hours = parseFloat(entry.hours) || 0;
+        const hours = parseFloat(calculateHours(entry.from_time, entry.to_time)) || 0;
         totalHours += hours;
         
         const month = dayjs(entry.date).format('YYYY-MM');
@@ -763,10 +763,10 @@ function AdminDashboard() {
                   {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
                     ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
                       ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
-                      : appliedPaymentFiltermonth
-                        ? `${dayjs().month(parseInt(appliedPaymentFiltermonth) - 1).format('MMMM')}`
-                        : appliedPaymentFilteryear
-                          ? `${appliedPaymentFilteryear}`
+                      : appliedPaymentFilterMonth 
+                        ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
+                        : appliedPaymentFilterYear
+                          ? `${appliedPaymentFilterYear}`
                           : ''
                     }`
                   }
