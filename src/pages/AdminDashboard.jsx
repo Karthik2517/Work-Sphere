@@ -42,6 +42,15 @@ function AdminDashboard() {
   const [editedEvent, setEditedEvent] = useState({ name: '' });
   const [editEventDialogOpen, setEditEventDialogOpen] = useState(false);
 
+  // New state for payments
+  const [showPaymentsTable, setShowPaymentsTable] = useState(false);
+  const [paymentFilterMonth, setPaymentFilterMonth] = useState('');
+  const [paymentFilterYear, setPaymentFilterYear] = useState('');
+  const [paymentFilterEmployee, setPaymentFilterEmployee] = useState('');
+  const [appliedPaymentFilterMonth, setAppliedPaymentFilterMonth] = useState('');
+  const [appliedPaymentFilterYear, setAppliedPaymentFilterYear] = useState('');
+  const [appliedPaymentFilterEmployee, setAppliedPaymentFilterEmployee] = useState('');
+
   useEffect(() => {
     fetchWorkEntries();
     fetchEmployees();
@@ -383,6 +392,88 @@ function AdminDashboard() {
     return date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
   };
 
+  // Payment calculation functions
+  const calculateEmployeePayments = () => {
+    const employeePayments = [];
+    const hourlyRate = 10; // $10 per hour
+
+    // Get all employees who have work entries in the selected period
+    const employeesWithWork = new Set();
+    workEntries.forEach(entry => {
+      const entryDate = dayjs(entry.date);
+      const matchesMonth = appliedPaymentFilterMonth ? entryDate.format('MM') === appliedPaymentFilterMonth : true;
+      const matchesYear = appliedPaymentFilterYear ? entryDate.format('YYYY') === appliedPaymentFilterYear : true;
+      if (matchesMonth && matchesYear) {
+        employeesWithWork.add(entry.employee_id);
+      }
+    });
+
+    // If employee filter is applied, only show that employee
+    // Otherwise, show only employees who have work in the selected period
+    const employeesToProcess = appliedPaymentFilterEmployee 
+      ? employees.filter(emp => emp.id === parseInt(appliedPaymentFilterEmployee) && emp.role !== 'admin')
+      : employees.filter(emp => emp.role !== 'admin' && employeesWithWork.has(emp.id));
+
+    employeesToProcess.forEach(employee => {
+      let totalHours = 0;
+      let monthlyHours = {};
+
+      // Filter work entries for this employee
+      const employeeEntries = workEntries.filter(entry => {
+        const entryDate = dayjs(entry.date);
+        const matchesEmployee = entry.employee_id === employee.id;
+        const matchesMonth = appliedPaymentFilterMonth ? entryDate.format('MM') === appliedPaymentFilterMonth : true;
+        const matchesYear = appliedPaymentFilterYear ? entryDate.format('YYYY') === appliedPaymentFilterYear : true;
+        return matchesEmployee && matchesMonth && matchesYear;
+      });
+
+      // Calculate total hours and monthly breakdown
+      employeeEntries.forEach(entry => {
+        const hours = parseFloat(entry.hours) || 0;
+        totalHours += hours;
+        
+        const month = dayjs(entry.date).format('YYYY-MM');
+        if (!monthlyHours[month]) {
+          monthlyHours[month] = 0;
+        }
+        monthlyHours[month] += hours;
+      });
+
+      const totalPayment = totalHours * hourlyRate;
+
+      employeePayments.push({
+        id: employee.id,
+        name: employee.name,
+        totalHours: totalHours.toFixed(2),
+        totalPayment: totalPayment.toFixed(2),
+        monthlyHours,
+        entryCount: employeeEntries.length
+      });
+    });
+
+    return employeePayments.sort((a, b) => parseFloat(b.totalPayment) - parseFloat(a.totalPayment));
+  };
+
+  const handleApplyPaymentFilter = () => {
+    setAppliedPaymentFilterMonth(paymentFilterMonth);
+    setAppliedPaymentFilterYear(paymentFilterYear);
+    setAppliedPaymentFilterEmployee(paymentFilterEmployee);
+  };
+
+  const handleResetPaymentFilters = () => {
+    setPaymentFilterMonth('');
+    setPaymentFilterYear('');
+    setPaymentFilterEmployee('');
+    setAppliedPaymentFilterMonth('');
+    setAppliedPaymentFilterYear('');
+    setAppliedPaymentFilterEmployee('');
+  };
+
+  const getTotalCompanyPayment = () => {
+    const payments = calculateEmployeePayments();
+    return payments.reduce((total, payment) => total + parseFloat(payment.totalPayment), 0).toFixed(2);
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -400,6 +491,12 @@ function AdminDashboard() {
               onClick={() => setShowEventsTable(!showEventsTable)}
             >
               {showEventsTable ? "Hide Events" : "Show All Events"}
+            </Button>
+            <Button 
+              variant={showPaymentsTable ? "contained" : "outlined"} 
+              onClick={() => setShowPaymentsTable(!showPaymentsTable)}
+            >
+              {showPaymentsTable ? "Hide Payments" : "Show Payments"}
             </Button>
             <Button variant="outlined" onClick={handleLogout}>Logout</Button>
           </Box>
@@ -519,6 +616,182 @@ function AdminDashboard() {
                   </TableBody>
                 </Table>
               </TableContainer>
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Payments Section */}
+        {showPaymentsTable && (
+          <Grid item xs={12} sx={{ mb: 3 }}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>Employee Payments</Typography>
+              
+              {/* Payment Filters */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>Filter by Period</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl fullWidth>
+                      <InputLabel id="payment-employee-label">Employee</InputLabel>
+                      <Select
+                        labelId="payment-employee-label"
+                        value={paymentFilterEmployee}
+                        label="Employee"
+                        onChange={(e) => setPaymentFilterEmployee(e.target.value)}
+                      >
+                        <MenuItem value="">All Employees</MenuItem>
+                        {employees.filter(emp => emp.role !== 'admin').map(emp => (
+                          <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl fullWidth>
+                      <InputLabel id="payment-month-label">Month</InputLabel>
+                      <Select
+                        labelId="payment-month-label"
+                        value={paymentFilterMonth}
+                        label="Month"
+                        onChange={(e) => setPaymentFilterMonth(e.target.value)}
+                      >
+                        <MenuItem value="">All Months</MenuItem>
+                        {[...Array(12).keys()].map(month => (
+                          <MenuItem key={month + 1} value={String(month + 1).padStart(2, '0')}>
+                            {dayjs().month(month).format('MMMM')}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl fullWidth>
+                      <InputLabel id="payment-year-label">Year</InputLabel>
+                      <Select
+                        labelId="payment-year-label"
+                        value={paymentFilterYear}
+                        label="Year"
+                        onChange={(e) => setPaymentFilterYear(e.target.value)}
+                      >
+                        <MenuItem value="">All Years</MenuItem>
+                        {[...Array(5).keys()].map(i => {
+                          const year = dayjs().year() - 2 + i;
+                          return <MenuItem key={year} value={String(year)}>{year}</MenuItem>;
+                        })}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3} sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                    <Button variant="contained" onClick={handleApplyPaymentFilter} fullWidth>Apply Filter</Button>
+                    <Button variant="outlined" onClick={handleResetPaymentFilters} fullWidth>Reset</Button>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Total Company Payment */}
+              <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.main', color: 'white', borderRadius: 1 }}>
+                <Typography variant="h6">
+                  Total Company Payment: ${getTotalCompanyPayment()}
+                </Typography>
+                <Typography variant="body2">
+                  Hourly Rate: $10.00 | Period: {appliedPaymentFilterEmployee ? 
+                    `${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown'} - ` : ''}
+                  {appliedPaymentFilterMonth && appliedPaymentFilterYear ? 
+                    `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}` : 
+                    'All Time'}
+                </Typography>
+              </Box>
+
+              {/* Total Breakdown Heading */}
+              <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2 }}>
+                {appliedPaymentFilterEmployee 
+                  ? `Total Breakdown for ${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown Employee'}`
+                  : 'Total Breakdown'
+                }
+                {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
+                  ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
+                    ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
+                    : appliedPaymentFilterMonth 
+                      ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
+                      : appliedPaymentFilterYear
+                        ? `${appliedPaymentFilterYear}`
+                        : ''
+                  }`
+                }
+              </Typography>
+
+              {/* Payments Table */}
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table sx={{ minWidth: 600 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Employee Name</TableCell>
+                      <TableCell>Total Hours</TableCell>
+                      <TableCell>Hourly Rate</TableCell>
+                      <TableCell>Total Payment</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {calculateEmployeePayments().map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {payment.name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{payment.totalHours} hrs</TableCell>
+                        <TableCell>$10.00/hr</TableCell>
+                        <TableCell>
+                          <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                            ${payment.totalPayment}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Monthly Breakdown for Filtered Employee */}
+              {appliedPaymentFilterEmployee && !appliedPaymentFilterMonth && calculateEmployeePayments().length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Monthly Breakdown for {employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name}
+                  </Typography>
+                  <TableContainer sx={{ overflowX: 'auto' }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Month</TableCell>
+                          <TableCell>Total Hours</TableCell>
+                          <TableCell>Payment</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {Object.entries(calculateEmployeePayments()[0]?.monthlyHours || {}).map(([month, hours]) => (
+                          <TableRow key={month}>
+                            <TableCell>
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                {dayjs(month).format('MMMM YYYY')}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body1" fontWeight="bold">
+                                {hours.toFixed(2)} hrs
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body1" fontWeight="bold" color="primary">
+                                ${(hours * 10).toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
             </Paper>
           </Grid>
         )}
@@ -751,6 +1024,7 @@ function AdminDashboard() {
                       <TableCell>From Time</TableCell>
                       <TableCell>To Time</TableCell>
                       <TableCell>Hours</TableCell>
+                      <TableCell>Pay</TableCell>
                       <TableCell key="event" sortDirection={orderBy === 'event' ? order : false}>
                         <TableSortLabel
                           active={orderBy === 'event'}
@@ -817,6 +1091,13 @@ function AdminDashboard() {
                               <TextField value={editedEntry.hours} InputProps={{ readOnly: true }} fullWidth />
                             </TableCell>
                             <TableCell>
+                              <TextField 
+                                value={`$${(parseFloat(editedEntry.hours) * 10).toFixed(2)}`} 
+                                InputProps={{ readOnly: true }} 
+                                fullWidth 
+                              />
+                            </TableCell>
+                            <TableCell>
                               <TextField value={editedEntry.event} onChange={(e) => setEditedEntry({ ...editedEntry, event: e.target.value })} fullWidth />
                             </TableCell>
                             <TableCell>
@@ -834,6 +1115,11 @@ function AdminDashboard() {
                             <TableCell>{entry.from_time ? formatTime(entry.from_time) : ''}</TableCell>
                             <TableCell>{entry.to_time ? formatTime(entry.to_time) : ''}</TableCell>
                             <TableCell>{entry.hours}</TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="bold" color="primary">
+                                ${(parseFloat(entry.hours) * 10).toFixed(2)}
+                              </Typography>
+                            </TableCell>
                             <TableCell>{entry.event}</TableCell>
                             <TableCell>
                               <Button onClick={() => handleEditClick(entry)}>Edit</Button>
