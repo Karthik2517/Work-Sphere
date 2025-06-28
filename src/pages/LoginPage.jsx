@@ -1,25 +1,39 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Typography, Container, Paper, Box } from '@mui/material';
-import data from '../data/db.json';
+import { employeesApi } from '../services/supabaseApi';
 
 function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('employee'); // or 'admin'
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    const user = data.employees.find(emp => emp.name === username && emp.password === password && emp.role === role);
-    if (user) {
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else if (user.role === 'employee') {
-        navigate(`/employee/${user.id}`);
+  const handleLogin = async () => {
+    if (!username || !password) {
+      alert('Please enter both username and password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const user = await employeesApi.authenticate(username, password);
+      
+      if (user && user.role === role) {
+        if (user.role === 'admin') {
+          navigate('/admin');
+        } else if (user.role === 'employee') {
+          navigate(`/employee/${user.id}`);
+        }
+      } else {
+        alert('Invalid credentials or role mismatch');
       }
-    } else {
+    } catch (error) {
+      console.error('Login error:', error);
       alert('Invalid credentials');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,6 +59,7 @@ function LoginPage() {
             autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            disabled={isLoading}
           />
           <TextField
             margin="normal"
@@ -57,6 +72,7 @@ function LoginPage() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
           />
           <Button
             type="submit"
@@ -64,8 +80,9 @@ function LoginPage() {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
             onClick={handleLogin}
+            disabled={isLoading}
           >
-            Sign In
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </Button>
         </Box>
       </Paper>

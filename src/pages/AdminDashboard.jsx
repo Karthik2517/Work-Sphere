@@ -5,6 +5,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { TimePicker, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
+import { workEntriesApi, employeesApi, eventsApi } from '../services/supabaseApi';
 
 function AdminDashboard() {
   const [workEntries, setWorkEntries] = useState([]);
@@ -37,8 +38,7 @@ function AdminDashboard() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/events');
-      const data = await response.json();
+      const data = await eventsApi.getAll();
       setEvents(data);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -82,8 +82,7 @@ function AdminDashboard() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/employees');
-      const data = await response.json();
+      const data = await employeesApi.getAll();
       setEmployees(data);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -92,8 +91,7 @@ function AdminDashboard() {
 
   const fetchWorkEntries = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/work-entries');
-      const data = await response.json();
+      const data = await workEntriesApi.getAll();
       setWorkEntries(data);
     } catch (error) {
       console.error('Error fetching work entries:', error);
@@ -143,21 +141,17 @@ function AdminDashboard() {
 
   const handleAddEntry = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/work-entries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...newEntry, employee_id: parseInt(newEntry.employee_id), hours: parseFloat(newEntry.hours) }),
+      const addedEntry = await workEntriesApi.create({ 
+        ...newEntry, 
+        employee_id: parseInt(newEntry.employee_id), 
+        hours: parseFloat(newEntry.hours) 
       });
-      const addedEntry = await response.json();
       setWorkEntries([...workEntries, addedEntry]);
       setNewEntry({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '' });
     } catch (error) {
       console.error('Error adding work entry:', error);
     }
   };
-
 
   const handleResetNewEntry = () => {
     setNewEntry({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '' });
@@ -170,14 +164,11 @@ function AdminDashboard() {
 
   const handleSaveEdit = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/work-entries/${editedEntry.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...editedEntry, employee_id: parseInt(editedEntry.employee_id), hours: parseFloat(editedEntry.hours) }),
+      const updatedEntry = await workEntriesApi.update(editedEntry.id, { 
+        ...editedEntry, 
+        employee_id: parseInt(editedEntry.employee_id), 
+        hours: parseFloat(editedEntry.hours) 
       });
-      const updatedEntry = await response.json();
       setWorkEntries(workEntries.map(entry => entry.id === updatedEntry.id ? updatedEntry : entry));
       setEditingEntryId(null);
       setEditedEntry(null);
@@ -193,9 +184,7 @@ function AdminDashboard() {
 
   const handleDeleteClick = async (id) => {
     try {
-      await fetch(`http://localhost:3001/api/work-entries/${id}`, {
-        method: 'DELETE',
-      });
+      await workEntriesApi.delete(id);
       setWorkEntries(workEntries.filter(entry => entry.id !== id));
     } catch (error) {
       console.error('Error deleting work entry:', error);
@@ -206,18 +195,9 @@ function AdminDashboard() {
     navigate('/');
   };
 
-
-
   const handleAddEmployee = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/employees', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...newEmployee, role: 'employee' }),
-      });
-      const addedEmployee = await response.json();
+      const addedEmployee = await employeesApi.create({ ...newEmployee, role: 'employee' });
       setEmployees([...employees, addedEmployee]);
       setNewEmployee({ name: '', password: '' });
     } catch (error) {
@@ -227,14 +207,7 @@ function AdminDashboard() {
 
   const handleAddEvent = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: newEventName }),
-      });
-      const addedEvent = await response.json();
+      const addedEvent = await eventsApi.create({ name: newEventName });
       setEvents([...events, addedEvent]);
       setNewEventName('');
     } catch (error) {

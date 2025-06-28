@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, Button, Box, FormControl, InputLabel, Select, MenuItem, Grid } from '@mui/material';
 import dayjs from 'dayjs';
+import { workEntriesApi, employeesApi } from '../services/supabaseApi';
 
 function EmployeeDashboard() {
   const { id } = useParams();
@@ -14,17 +15,15 @@ function EmployeeDashboard() {
   useEffect(() => {
     const fetchEmployeeData = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/work-entries');
-        const allWorkEntries = await response.json();
-        console.log('All Work Entries:', allWorkEntries);
-        setEmployeeWorkEntries(allWorkEntries.filter(entry => entry.employee_id === parseInt(id)));
-        console.log('Filtered Employee Work Entries:', allWorkEntries.filter(entry => entry.employee_id === parseInt(id)));
+        // Fetch work entries for this specific employee
+        const workEntries = await workEntriesApi.getByEmployee(parseInt(id));
+        console.log('Employee Work Entries:', workEntries);
+        setEmployeeWorkEntries(workEntries);
 
-        const employeesResponse = await fetch('http://localhost:3001/api/employees');
-        const allEmployees = await employeesResponse.json();
-        console.log('All Employees:', allEmployees);
-        setEmployee(allEmployees.find(emp => emp.id === parseInt(id)));
-        console.log('Current Employee:', allEmployees.find(emp => emp.id === parseInt(id)));
+        // Fetch employee details
+        const employeeData = await employeesApi.getById(parseInt(id));
+        console.log('Current Employee:', employeeData);
+        setEmployee(employeeData);
 
       } catch (error) {
         console.error('Error fetching employee data:', error);
