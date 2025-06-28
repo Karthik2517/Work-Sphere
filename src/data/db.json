@@ -1,0 +1,174 @@
+{
+  "employees": [
+    {
+      "id": 0,
+      "name": "admin",
+      "password": "admin",
+      "role": "admin"
+    },
+    {
+      "id": 1,
+      "name": "John Doe",
+      "password": "password123",
+      "role": "employee"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "password": "password123",
+      "role": "employee"
+    },
+    {
+      "name": "Karthik",
+      "password": "password",
+      "role": "employee",
+      "id": 3
+    },
+    {
+      "name": "Koti",
+      "password": "password",
+      "role": "employee",
+      "id": 4
+    }
+  ],
+  "work_entries": [
+    {
+      "id": 1,
+      "employee_id": 1,
+      "date": "2025-06-26",
+      "day": "Thursday",
+      "hours": 6,
+      "from_time": "11:00",
+      "to_time": "17:00",
+      "event": "Wedding Decor"
+    },
+    {
+      "id": 2,
+      "employee_id": 2,
+      "date": "2025-06-26",
+      "day": "Thursday",
+      "hours": 14,
+      "from_time": "10:00",
+      "to_time": "00:00",
+      "event": "Corporate Event Setup"
+    },
+    {
+      "employee_id": 2,
+      "date": "2025-06-11",
+      "day": "Monday",
+      "hours": 5,
+      "from_time": "13:00",
+      "to_time": "18:00",
+      "event": "reception",
+      "id": 3
+    },
+    {
+      "employee_id": 1,
+      "date": "2025-06-04",
+      "day": "Wednesday",
+      "hours": 2.5,
+      "from_time": "13:30",
+      "to_time": "16:00",
+      "event": "wedding",
+      "id": 4
+    },
+    {
+      "employee_id": null,
+      "date": "2025-06-17",
+      "day": "Tuesday",
+      "hours": 23,
+      "from_time": "01:00",
+      "to_time": "00:00",
+      "event": "",
+      "id": 5
+    },
+    {
+      "employee_id": 1,
+      "date": "2025-06-12",
+      "day": "Thursday",
+      "hours": 2,
+      "from_time": "14:00",
+      "to_time": "16:00",
+      "event": "house warming",
+      "id": 6
+    },
+    {
+      "employee_id": 3,
+      "date": "2025-05-14",
+      "day": "Wednesday",
+      "hours": 16,
+      "from_time": "00:00",
+      "to_time": "16:00",
+      "event": "wedding",
+      "id": 7
+    },
+    {
+      "employee_id": 3,
+      "date": "2025-05-19",
+      "day": "Monday",
+      "hours": 10,
+      "from_time": "03:00",
+      "to_time": "13:00",
+      "event": "",
+      "id": 8
+    },
+    {
+      "employee_id": 4,
+      "date": "2025-06-28",
+      "day": "Saturday",
+      "hours": 5,
+      "from_time": "09:00",
+      "to_time": "14:00",
+      "event": "house warming",
+      "id": 9
+    },
+    {
+      "employee_id": 2,
+      "date": "2025-06-17",
+      "day": "Tuesday",
+      "hours": 8,
+      "from_time": "15:00",
+      "to_time": "23:00",
+      "event": "Wedding Decor",
+      "id": 10
+    }
+  ],
+  "events": [
+    {
+      "id": 1,
+      "name": "Wedding Decor"
+    },
+    {
+      "id": 2,
+      "name": "Corporate Event Setup"
+    },
+    {
+      "id": 3,
+      "name": "reception"
+    },
+    {
+      "id": 4,
+      "name": "wedding"
+    },
+    {
+      "id": 5,
+      "name": "house warming"
+    },
+    {
+      "name": "weddings",
+      "id": 6
+    },
+    {
+      "name": "haldi",
+      "id": 7
+    },
+    {
+      "name": "engagement",
+      "id": 8
+    },
+    {
+      "name": "Grad Party",
+      "id": 9
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+
+/* Basic responsive adjustments for images if any were added */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure elements respect padding and border in their total width/height */
+* {
+  box-sizing: border-box;
+}
