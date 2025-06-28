@@ -763,10 +763,10 @@ function AdminDashboard() {
                   {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
                     ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
                       ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
-                      : appliedPaymentFilterMonth 
-                        ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
-                        : appliedPaymentFilterYear
-                          ? `${appliedPaymentFilterYear}`
+                      : appliedPaymentFiltermonth 
+                        ? `${dayjs().month(parseInt(appliedPaymentFiltermonth) - 1).format('MMMM')}`
+                        : appliedPaymentFilteryear
+                          ? `${appliedPaymentFilteryear}`
                           : ''
                     }`
                   }
@@ -994,7 +994,7 @@ function AdminDashboard() {
               </Grid>
             <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
                 <Button variant="contained" onClick={handleApplyFilter} fullWidth>Filter</Button>
-                <Button variant="outlined" onClick={handleResetFilters} fullWidth>Reset Filters</Button>
+                <Button variant="outlined" onClick={handleResetFilters} fullWidth>Reset</Button>
               </Grid>
             </Grid>
           </Paper>
