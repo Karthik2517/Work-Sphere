@@ -689,68 +689,78 @@ function AdminDashboard() {
               </Box>
 
               {/* Total Company Payment */}
-              <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.main', color: 'white', borderRadius: 1 }}>
-                <Typography variant="h6">
-                  Total Company Payment: ${getTotalCompanyPayment()}
-                </Typography>
-                <Typography variant="body2">
-                  Hourly Rate: $10.00 | Period: {appliedPaymentFilterEmployee ? 
-                    `${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown'} - ` : ''}
-                  {appliedPaymentFilterMonth && appliedPaymentFilterYear ? 
-                    `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}` : 
-                    'All Time'}
-                </Typography>
-              </Box>
+              {(appliedPaymentFilterEmployee || appliedPaymentFilterMonth || appliedPaymentFilterYear) && (
+                <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.main', color: 'white', borderRadius: 1 }}>
+                  <Typography variant="h6">
+                    Total Company Payment: ${getTotalCompanyPayment()}
+                  </Typography>
+                  <Typography variant="body2">
+                    Hourly Rate: $10.00 | Period: {appliedPaymentFilterEmployee ? 
+                      `${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown'} - ` : ''}
+                    {appliedPaymentFilterMonth && appliedPaymentFilterYear ? 
+                      `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}` : 
+                      appliedPaymentFilterMonth 
+                        ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
+                        : appliedPaymentFilterYear
+                          ? `${appliedPaymentFilterYear}`
+                          : 'All Time'}
+                  </Typography>
+                </Box>
+              )}
 
               {/* Total Breakdown Heading */}
-              <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2 }}>
-                {appliedPaymentFilterEmployee 
-                  ? `Total Breakdown for ${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown Employee'}`
-                  : 'Total Breakdown'
-                }
-                {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
-                  ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
-                    ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
-                    : appliedPaymentFilterMonth 
-                      ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
-                      : appliedPaymentFilterYear
-                        ? `${appliedPaymentFilterYear}`
-                        : ''
-                  }`
-                }
-              </Typography>
+              {(appliedPaymentFilterEmployee || appliedPaymentFilterMonth || appliedPaymentFilterYear) && (
+                <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2 }}>
+                  {appliedPaymentFilterEmployee 
+                    ? `Total Breakdown for ${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown Employee'}`
+                    : 'Total Breakdown'
+                  }
+                  {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
+                    ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
+                      ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
+                      : appliedPaymentFilterMonth 
+                        ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
+                        : appliedPaymentFilterYear
+                          ? `${appliedPaymentFilterYear}`
+                          : ''
+                    }`
+                  }
+                </Typography>
+              )}
 
               {/* Payments Table */}
-              <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table sx={{ minWidth: 600 }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Employee Name</TableCell>
-                      <TableCell>Total Hours</TableCell>
-                      <TableCell>Hourly Rate</TableCell>
-                      <TableCell>Total Payment</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {calculateEmployeePayments().map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell>
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            {payment.name}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>{payment.totalHours} hrs</TableCell>
-                        <TableCell>$10.00/hr</TableCell>
-                        <TableCell>
-                          <Typography variant="subtitle1" fontWeight="bold" color="primary">
-                            ${payment.totalPayment}
-                          </Typography>
-                        </TableCell>
+              {(appliedPaymentFilterEmployee || appliedPaymentFilterMonth || appliedPaymentFilterYear) && (
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                  <Table sx={{ minWidth: 600 }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Employee Name</TableCell>
+                        <TableCell>Total Hours</TableCell>
+                        <TableCell>Hourly Rate</TableCell>
+                        <TableCell>Total Payment</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {calculateEmployeePayments().map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              {payment.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{payment.totalHours} hrs</TableCell>
+                          <TableCell>$10.00/hr</TableCell>
+                          <TableCell>
+                            <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                              ${payment.totalPayment}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
 
               {/* Monthly Breakdown for Filtered Employee */}
               {appliedPaymentFilterEmployee && !appliedPaymentFilterMonth && calculateEmployeePayments().length > 0 && (
