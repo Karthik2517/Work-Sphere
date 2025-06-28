@@ -2,7 +2,7 @@
 
 A comprehensive work management and time tracking application built with React and Node.js. Work Sphere allows employees to log their work hours, track events, and provides administrators with powerful tools to manage employee data and generate reports.
 
-## 🌟 Features
+## Features
 
 ### For Employees
 - **Time Tracking**: Log work hours with start and end times
@@ -33,7 +33,7 @@ A comprehensive work management and time tracking application built with React a
 - **CORS** - Cross-origin resource sharing
 - **JSON Server** - Mock REST API for development
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 - Node.js (v16 or higher)
@@ -72,7 +72,7 @@ A comprehensive work management and time tracking application built with React a
    ```
    The application will be available at `http://localhost:5173`
 
-## 🚀 Usage
+## Usage
 
 ### Starting the Application
 
@@ -99,7 +99,7 @@ A comprehensive work management and time tracking application built with React a
 - `npm run lint` - Run ESLint
 - `npm run deploy` - Deploy to GitHub Pages
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Work-Sphere/
@@ -134,7 +134,7 @@ The application uses default localhost URLs. For production, you may want to con
 ### Database
 The application uses a JSON file (`src/data/db.json`) as a mock database. In production, you would replace this with a real database like PostgreSQL, MongoDB, or MySQL.
 
-## 🎨 Features in Detail
+## Features in Detail
 
 ### Admin Dashboard
 - **Employee Management**: Add new employees with name and password
@@ -158,7 +158,7 @@ The application includes a basic authentication system. In production, you shoul
 - Session management
 - Role-based access control
 
-## 🚀 Deployment
+## Deployment
 
 ### GitHub Pages
 The project is configured for deployment to GitHub Pages:
@@ -174,7 +174,7 @@ You can deploy to other platforms like:
 - Heroku
 - AWS
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
@@ -182,31 +182,9 @@ You can deploy to other platforms like:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨‍💻 Author
-
-**Karthik2517**
-- GitHub: [@Karthik2517](https://github.com/Karthik2517)
-- Email: karthikeyareddy122@gmail.com
-
-## 🙏 Acknowledgments
-
-- Material-UI for the beautiful component library
-- Vite for the fast development experience
-- Day.js for lightweight date manipulation
-- Express.js for the robust backend framework
-
-## 📞 Support
-
-If you have any questions or need support, please:
-
-1. Check the [Issues](https://github.com/Karthik2517/Work-Sphere/issues) page
-2. Create a new issue if your problem isn't already addressed
-3. Contact the author at karthikeyareddy122@gmail.com
-
----
 
 ⭐ **Star this repository if you find it helpful!**
