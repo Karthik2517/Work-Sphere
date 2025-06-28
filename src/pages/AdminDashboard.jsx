@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, TableSortLabel, Grid } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, TableSortLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { TimePicker, DatePicker } from '@mui/x-date-pickers';
@@ -29,6 +29,18 @@ function AdminDashboard() {
   const [events, setEvents] = useState([]);
   const [newEventName, setNewEventName] = useState('');
   const navigate = useNavigate();
+
+  // New state for employees management
+  const [showEmployeesTable, setShowEmployeesTable] = useState(false);
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+  const [editedEmployee, setEditedEmployee] = useState({ name: '', password: '', role: 'employee' });
+  const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
+
+  // New state for events management
+  const [showEventsTable, setShowEventsTable] = useState(false);
+  const [editingEventId, setEditingEventId] = useState(null);
+  const [editedEvent, setEditedEvent] = useState({ name: '' });
+  const [editEventDialogOpen, setEditEventDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchWorkEntries();
@@ -215,6 +227,86 @@ function AdminDashboard() {
     }
   };
 
+  // New functions for employee management
+  const handleEditEmployee = (employee) => {
+    setEditingEmployeeId(employee.id);
+    setEditedEmployee({ ...employee });
+    setEditEmployeeDialogOpen(true);
+  };
+
+  const handleSaveEmployeeEdit = async () => {
+    try {
+      const updatedEmployee = await employeesApi.update(editingEmployeeId, editedEmployee);
+      setEmployees(employees.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
+      setEditEmployeeDialogOpen(false);
+      setEditingEmployeeId(null);
+      setEditedEmployee({ name: '', password: '', role: 'employee' });
+    } catch (error) {
+      console.error('Error updating employee:', error);
+    }
+  };
+
+  const handleDeleteEmployee = async (id) => {
+    if (window.confirm('Are you sure you want to delete this employee? This will also delete all their work entries.')) {
+      try {
+        await employeesApi.delete(id);
+        setEmployees(employees.filter(emp => emp.id !== id));
+        // Also remove work entries for this employee
+        setWorkEntries(workEntries.filter(entry => entry.employee_id !== id));
+      } catch (error) {
+        console.error('Error deleting employee:', error);
+      }
+    }
+  };
+
+  const handleCancelEmployeeEdit = () => {
+    setEditEmployeeDialogOpen(false);
+    setEditingEmployeeId(null);
+    setEditedEmployee({ name: '', password: '', role: 'employee' });
+  };
+
+  // New functions for event management
+  const handleEditEvent = (event) => {
+    setEditingEventId(event.id);
+    setEditedEvent({ ...event });
+    setEditEventDialogOpen(true);
+  };
+
+  const handleSaveEventEdit = async () => {
+    try {
+      const updatedEvent = await eventsApi.update(editingEventId, editedEvent);
+      setEvents(events.map(evt => evt.id === updatedEvent.id ? updatedEvent : evt));
+      setEditEventDialogOpen(false);
+      setEditingEventId(null);
+      setEditedEvent({ name: '' });
+    } catch (error) {
+      console.error('Error updating event:', error);
+    }
+  };
+
+  const handleDeleteEvent = async (id) => {
+    if (window.confirm('Are you sure you want to delete this event? This will remove it from all work entries.')) {
+      try {
+        await eventsApi.delete(id);
+        setEvents(events.filter(evt => evt.id !== id));
+        // Update work entries to remove references to deleted event
+        setWorkEntries(workEntries.map(entry => 
+          entry.event === events.find(evt => evt.id === id)?.name 
+            ? { ...entry, event: '' } 
+            : entry
+        ));
+      } catch (error) {
+        console.error('Error deleting event:', error);
+      }
+    }
+  };
+
+  const handleCancelEventEdit = () => {
+    setEditEventDialogOpen(false);
+    setEditingEventId(null);
+    setEditedEvent({ name: '' });
+  };
+
   const filteredWorkEntries = workEntries.filter(entry => {
     const entryDate = dayjs(entry.date);
     const matchesEmployee = appliedFilterEmployeeId ? entry.employee_id === appliedFilterEmployeeId : true;
@@ -296,8 +388,140 @@ function AdminDashboard() {
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1">Admin Dashboard</Typography>
-          <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant={showEmployeesTable ? "contained" : "outlined"} 
+              onClick={() => setShowEmployeesTable(!showEmployeesTable)}
+            >
+              {showEmployeesTable ? "Hide Employees" : "Show All Employees"}
+            </Button>
+            <Button 
+              variant={showEventsTable ? "contained" : "outlined"} 
+              onClick={() => setShowEventsTable(!showEventsTable)}
+            >
+              {showEventsTable ? "Hide Events" : "Show All Events"}
+            </Button>
+            <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+          </Box>
         </Box>
+
+        {/* All Employees Table Section */}
+        {showEmployeesTable && (
+          <Grid item xs={12} sx={{ mb: 3 }}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>All Employees</Typography>
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table sx={{ minWidth: 600 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Role</TableCell>
+                      <TableCell>Created At</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {employees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell>{employee.id}</TableCell>
+                        <TableCell>{employee.name}</TableCell>
+                        <TableCell>
+                          <Box sx={{ 
+                            display: 'inline-block', 
+                            px: 1, 
+                            py: 0.5, 
+                            borderRadius: 1, 
+                            backgroundColor: employee.role === 'admin' ? 'primary.main' : 'secondary.main',
+                            color: 'white',
+                            fontSize: '0.75rem'
+                          }}>
+                            {employee.role}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {dayjs(employee.created_at).format('MMM DD, YYYY')}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button 
+                              size="small" 
+                              variant="outlined" 
+                              onClick={() => handleEditEmployee(employee)}
+                              disabled={employee.role === 'admin'}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              size="small" 
+                              variant="outlined" 
+                              color="error" 
+                              onClick={() => handleDeleteEmployee(employee.id)}
+                              disabled={employee.role === 'admin'}
+                            >
+                              Delete
+                            </Button>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          </Grid>
+        )}
+
+        {/* All Events Table Section */}
+        {showEventsTable && (
+          <Grid item xs={12} sx={{ mb: 3 }}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>All Events</Typography>
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table sx={{ minWidth: 600 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Event Name</TableCell>
+                      <TableCell>Created At</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {events.map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell>{event.id}</TableCell>
+                        <TableCell>{event.name}</TableCell>
+                        <TableCell>
+                          {dayjs(event.created_at).format('MMM DD, YYYY')}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button 
+                              size="small" 
+                              variant="outlined" 
+                              onClick={() => handleEditEvent(event)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              size="small" 
+                              variant="outlined" 
+                              color="error" 
+                              onClick={() => handleDeleteEvent(event.id)}
+                            >
+                              Delete
+                            </Button>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          </Grid>
+        )}
 
         <Grid container spacing={3}>
           {/* Add New Employee Section */}
@@ -699,6 +923,63 @@ function AdminDashboard() {
           </Grid>
         </Grid>
       </Container>
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={editEmployeeDialogOpen} onClose={handleCancelEmployeeEdit} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Employee</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Name"
+              value={editedEmployee.name}
+              onChange={(e) => setEditedEmployee({ ...editedEmployee, name: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Password"
+              type="password"
+              value={editedEmployee.password}
+              onChange={(e) => setEditedEmployee({ ...editedEmployee, password: e.target.value })}
+              fullWidth
+            />
+            <FormControl fullWidth>
+              <InputLabel id="role-select-label">Role</InputLabel>
+              <Select
+                labelId="role-select-label"
+                value={editedEmployee.role}
+                label="Role"
+                onChange={(e) => setEditedEmployee({ ...editedEmployee, role: e.target.value })}
+              >
+                <MenuItem value="employee">Employee</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelEmployeeEdit}>Cancel</Button>
+          <Button onClick={handleSaveEmployeeEdit} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Event Dialog */}
+      <Dialog open={editEventDialogOpen} onClose={handleCancelEventEdit} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Event</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Event Name"
+              value={editedEvent.name}
+              onChange={(e) => setEditedEvent({ ...editedEvent, name: e.target.value })}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelEventEdit}>Cancel</Button>
+          <Button onClick={handleSaveEventEdit} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
 
       </LocalizationProvider>
   );
