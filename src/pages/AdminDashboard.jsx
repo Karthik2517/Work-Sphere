@@ -506,6 +506,33 @@ function AdminDashboard() {
         {showEmployeesTable && (
           <Grid item xs={12} sx={{ mb: 3 }}>
             <Paper sx={{ p: 2 }}>
+              {/* Add New Employee Section */}
+              <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography variant="h6" gutterBottom>Add New Employee</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Name"
+                      value={newEmployee.name}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Password"
+                      type="password"
+                      value={newEmployee.password}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <Button variant="contained" onClick={handleAddEmployee} fullWidth>Add Employee</Button>
+                  </Grid>
+                </Grid>
+              </Box>
+              
               <Typography variant="h6" gutterBottom>All Employees</Typography>
               <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table sx={{ minWidth: 600 }}>
@@ -573,6 +600,24 @@ function AdminDashboard() {
         {showEventsTable && (
           <Grid item xs={12} sx={{ mb: 3 }}>
             <Paper sx={{ p: 2 }}>
+              {/* Add New Event Section */}
+              <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography variant="h6" gutterBottom>Add New Event</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Event Name"
+                      value={newEventName}
+                      onChange={(e) => setNewEventName(e.target.value)}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <Button variant="contained" onClick={handleAddEvent} fullWidth>Add Event</Button>
+                  </Grid>
+                </Grid>
+              </Box>
+              
               <Typography variant="h6" gutterBottom>All Events</Typography>
               <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table sx={{ minWidth: 600 }}>
@@ -718,10 +763,10 @@ function AdminDashboard() {
                   {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
                     ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
                       ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
-                      : appliedPaymentFilterMonth 
-                        ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
-                        : appliedPaymentFilterYear
-                          ? `${appliedPaymentFilterYear}`
+                      : appliedPaymentFiltermonth
+                        ? `${dayjs().month(parseInt(appliedPaymentFiltermonth) - 1).format('MMMM')}`
+                        : appliedPaymentFilteryear
+                          ? `${appliedPaymentFilteryear}`
                           : ''
                     }`
                   }
@@ -807,55 +852,6 @@ function AdminDashboard() {
         )}
 
         <Grid container spacing={3}>
-          {/* Add New Employee Section */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>Add New Employee</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    label="Name"
-                    value={newEmployee.name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    label="Password"
-                    type="password"
-                    value={newEmployee.password}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <Button variant="contained" onClick={handleAddEmployee} fullWidth>Add Employee</Button>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-
-          {/* Add New Event Section */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>Add New Event</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    label="Event Name"
-                    value={newEventName}
-                    onChange={(e) => setNewEventName(e.target.value)}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <Button variant="contained" onClick={handleAddEvent} fullWidth>Add Event</Button>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-
           {/* Add New Work Entry Section */}
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
