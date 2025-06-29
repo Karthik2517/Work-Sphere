@@ -200,16 +200,27 @@ function AdminDashboard() {
 
   const handleSaveEdit = async () => {
     try {
-      const updatedEntry = await workEntriesApi.update(editedEntry.id, { 
+      console.log('Saving edited entry:', editedEntry);
+      
+      const updateData = { 
         ...editedEntry, 
         employee_id: parseInt(editedEntry.employee_id), 
         hours: parseFloat(editedEntry.hours) 
-      });
+      };
+      
+      console.log('Update data being sent:', updateData);
+      
+      const updatedEntry = await workEntriesApi.update(editedEntry.id, updateData);
+      console.log('Updated entry received:', updatedEntry);
+      
       setWorkEntries(workEntries.map(entry => entry.id === updatedEntry.id ? updatedEntry : entry));
       setEditingEntryId(null);
       setEditedEntry(null);
+      
+      alert('Work entry updated successfully!');
     } catch (error) {
       console.error('Error saving work entry:', error);
+      alert('Error saving work entry: ' + error.message);
     }
   };
 
@@ -338,7 +349,7 @@ function AdminDashboard() {
     const matchesMonth = appliedFilterMonth ? entryDate.format('MM') === appliedFilterMonth : true;
     const matchesYear = appliedFilterYear ? entryDate.format('YYYY') === appliedFilterYear : true;
     return matchesEmployee && matchesMonth && matchesYear;
-  }).sort((a, b) => b.id - a.id).slice(0, 5);
+  }).sort((a, b) => b.id - a.id);
 
   const handleApplyFilter = () => {
     setAppliedFilterEmployeeId(filterEmployeeId);
@@ -985,7 +996,7 @@ function AdminDashboard() {
                     label="Date"
                     value={newEntry.date ? dayjs(newEntry.date) : null}
                     onChange={(newValue) => handleDateChange(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    slotProps={{ textField: { fullWidth: true } }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
@@ -996,7 +1007,7 @@ function AdminDashboard() {
                     label="From Time"
                     value={newEntry.from_time ? dayjs(newEntry.from_time, 'HH:mm') : null}
                     onChange={(newValue) => handleTimeChange('from_time', newValue ? newValue.format('HH:mm') : '')}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    slotProps={{ textField: { fullWidth: true } }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
@@ -1004,7 +1015,7 @@ function AdminDashboard() {
                     label="To Time"
                     value={newEntry.to_time ? dayjs(newEntry.to_time, 'HH:mm') : null}
                     onChange={(newValue) => handleTimeChange('to_time', newValue ? newValue.format('HH:mm') : '')}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    slotProps={{ textField: { fullWidth: true } }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
@@ -1162,7 +1173,7 @@ function AdminDashboard() {
                                 label="Date"
                                 value={editedEntry.date ? dayjs(editedEntry.date) : null}
                                 onChange={(newValue) => handleDateChange(newValue, true)}
-                                renderInput={(params) => <TextField {...params} fullWidth />}
+                                slotProps={{ textField: { fullWidth: true } }}
                               />
                             </TableCell>
                             <TableCell>
@@ -1173,7 +1184,7 @@ function AdminDashboard() {
                                 label="From Time"
                                 value={editedEntry.from_time ? dayjs(editedEntry.from_time, 'HH:mm') : null}
                                 onChange={(newValue) => handleTimeChange('from_time', newValue ? newValue.format('HH:mm') : '', true)}
-                                renderInput={(params) => <TextField {...params} fullWidth />}
+                                slotProps={{ textField: { fullWidth: true } }}
                               />
                             </TableCell>
                             <TableCell>
@@ -1181,7 +1192,7 @@ function AdminDashboard() {
                                 label="To Time"
                                 value={editedEntry.to_time ? dayjs(editedEntry.to_time, 'HH:mm') : null}
                                 onChange={(newValue) => handleTimeChange('to_time', newValue ? newValue.format('HH:mm') : '', true)}
-                                renderInput={(params) => <TextField {...params} fullWidth />}
+                                slotProps={{ textField: { fullWidth: true } }}
                               />
                             </TableCell>
                             <TableCell>
@@ -1197,7 +1208,23 @@ function AdminDashboard() {
                               ${(parseFloat(editedEntry.hours) * 10 + getTotalBillsForDate(editedEntry.date, editedEntry.employee_id)).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              <TextField value={editedEntry.event} onChange={(e) => setEditedEntry({ ...editedEntry, event: e.target.value })} fullWidth />
+                              <FormControl fullWidth>
+                                <InputLabel id="event-edit-select-label">Event</InputLabel>
+                                <Select
+                                  labelId="event-edit-select-label"
+                                  id="event-edit-select"
+                                  value={editedEntry.event || ''}
+                                  label="Event"
+                                  onChange={(e) => setEditedEntry({ ...editedEntry, event: e.target.value })}
+                                >
+                                  <MenuItem value="">No Event</MenuItem>
+                                  {events.map((event) => (
+                                    <MenuItem key={event.id} value={event.name}>
+                                      {event.name}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
                             </TableCell>
                             <TableCell>
                               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>

@@ -6,14 +6,7 @@ export const workEntriesApi = {
   getAll: async () => {
     const { data, error } = await supabase
       .from('work_entries')
-      .select(`
-        *,
-        employees (
-          id,
-          name,
-          role
-        )
-      `)
+      .select('*')
       .order('date', { ascending: false })
     
     if (error) throw error
