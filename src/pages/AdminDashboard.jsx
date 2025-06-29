@@ -547,7 +547,7 @@ function AdminDashboard() {
             <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               {/* Add New Employee Section */}
               <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h6" gutterBottom>Add New Employee</Typography>
+                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Add New Employee</Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={4}>
                     <TextField
@@ -572,7 +572,7 @@ function AdminDashboard() {
                 </Grid>
               </Box>
               
-              <Typography variant="h6" gutterBottom>All Employees</Typography>
+              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>All Employees</Typography>
               <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                   <TableHead>
@@ -641,7 +641,7 @@ function AdminDashboard() {
             <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               {/* Add New Event Section */}
               <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h6" gutterBottom>Add New Event</Typography>
+                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Add New Event</Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={4}>
                     <TextField
@@ -657,7 +657,7 @@ function AdminDashboard() {
                 </Grid>
               </Box>
               
-              <Typography variant="h6" gutterBottom>All Events</Typography>
+              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>All Events</Typography>
               <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                   <TableHead>
@@ -706,7 +706,7 @@ function AdminDashboard() {
         {showPaymentsTable && (
           <Grid item xs={12} sx={{ mb: 3 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-              <Typography variant="h6" gutterBottom>Employee Payments</Typography>
+              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Employee Payments</Typography>
               
               {/* Payment Filters */}
               <Box sx={{ mb: 3 }}>
