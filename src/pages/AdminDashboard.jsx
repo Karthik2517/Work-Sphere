@@ -629,7 +629,7 @@ function AdminDashboard() {
                       fullWidth
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
+                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
                     <Button variant="contained" onClick={handleAddEmployee} fullWidth>Add Employee</Button>
                   </Grid>
                 </Grid>
@@ -714,19 +714,19 @@ function AdminDashboard() {
                       fullWidth
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
+                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
                     <Button variant="contained" onClick={handleAddEvent} fullWidth>Add Event</Button>
                   </Grid>
                 </Grid>
               </Box>
               
               <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>All Events</Typography>
-              <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
+              <TableContainer sx={{ overflowX: 'auto', maxWidth: '400px' }}>
+                <Table sx={{ minWidth: '300px' }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Event Name</TableCell>
-                      <TableCell>Actions</TableCell>
+                      <TableCell sx={{ width: '60%' }}>Event Name</TableCell>
+                      <TableCell sx={{ width: '40%' }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -822,8 +822,8 @@ function AdminDashboard() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={3} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
-                    <Button variant="contained" onClick={handleApplyPaymentFilter} fullWidth>Apply Filter</Button>
+                  <Grid item xs={12} sm={3} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
+                    <Button variant="contained" onClick={handleApplyPaymentFilter} fullWidth>Apply</Button>
                     <Button variant="outlined" onClick={handleResetPaymentFilters} fullWidth>Reset</Button>
                   </Grid>
                 </Grid>
@@ -1028,9 +1028,9 @@ function AdminDashboard() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
-                  <Button variant="contained" onClick={handleAddEntry} fullWidth>Add Entry</Button>
-                  <Button variant="outlined" onClick={handleResetNewEntry} fullWidth>Reset</Button>
+                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
+                  <Button variant="contained" onClick={handleAddEntry} sx={{ flex: 2 }}>Add Entry</Button>
+                  <Button variant="outlined" onClick={handleResetNewEntry} sx={{ flex: 1 }}>Reset</Button>
                 </Grid>
               </Grid>
             </Paper>
@@ -1097,7 +1097,7 @@ function AdminDashboard() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
+                <Grid item xs={12} sm={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
                   <Button variant="contained" onClick={handleApplyFilter} fullWidth>Filter</Button>
                   <Button variant="outlined" onClick={handleResetFilters} fullWidth>Reset</Button>
                 </Grid>
