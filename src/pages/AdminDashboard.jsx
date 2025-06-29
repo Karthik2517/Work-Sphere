@@ -322,7 +322,7 @@ function AdminDashboard() {
     const matchesMonth = appliedFilterMonth ? entryDate.format('MM') === appliedFilterMonth : true;
     const matchesYear = appliedFilterYear ? entryDate.format('YYYY') === appliedFilterYear : true;
     return matchesEmployee && matchesMonth && matchesYear;
-  });
+  }).sort((a, b) => b.id - a.id).slice(0, 5);
 
   const handleApplyFilter = () => {
     setAppliedFilterEmployeeId(filterEmployeeId);
@@ -1017,15 +1017,7 @@ function AdminDashboard() {
                           Employee Name
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell key="date" sortDirection={orderBy === 'date' ? order : false}>
-                        <TableSortLabel
-                          active={orderBy === 'date'}
-                          direction={orderBy === 'date' ? order : 'asc'}
-                          onClick={(event) => handleRequestSort(event, 'date')}
-                        >
-                          Date
-                        </TableSortLabel>
-                      </TableCell>
+                      <TableCell>Date</TableCell>
                       <TableCell>Day</TableCell>
                       <TableCell>From Time</TableCell>
                       <TableCell>To Time</TableCell>
@@ -1044,7 +1036,7 @@ function AdminDashboard() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {stableSort(filteredWorkEntries, getComparator(order, orderBy)).slice(0, 5).map((entry) => (
+                    {filteredWorkEntries.map((entry) => (
                       <TableRow key={entry.id}>
                         {editingEntryId === entry.id ? (
                           <>
