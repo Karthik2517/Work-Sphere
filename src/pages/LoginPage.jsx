@@ -44,9 +44,17 @@ function LoginPage() {
     <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ padding: { xs: 2, sm: 4 }, marginTop: { xs: 4, sm: 8 }, width: '100%', maxWidth: '400px' }}>
         <Box component="form" onSubmit={(e) => { e.preventDefault(); handleLogin(); }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-            Work Sphere
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="16" fill="#556cd6"/>
+              <circle cx="16" cy="16" r="11" fill="white" fillOpacity="0.1"/>
+              <path d="M16 8.5V16L20 19.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="16" cy="16" r="0.85" fill="white"/>
+            </svg>
+            <Typography component="h1" variant="h5">
+              Work Sphere
+            </Typography>
+          </Box>
           <Box sx={{ mb: 2, display: 'flex', gap: 1, width: '100%', justifyContent: 'center' }}>
             <Button onClick={() => { setRole('employee'); setUsername(''); setPassword(''); }} variant={role === 'employee' ? 'contained' : 'outlined'} sx={{ flexGrow: 1 }}>Employee</Button>
             <Button onClick={() => { setRole('admin'); setUsername(''); setPassword(''); }} variant={role === 'admin' ? 'contained' : 'outlined'} sx={{ flexGrow: 1 }}>Admin</Button>
