@@ -188,8 +188,37 @@ export const eventsApi = {
   }
 }
 
+export const billsApi = {
+  getAll: async () => {
+    const { data, error } = await supabase.from('bills').select('*').order('date', { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  getByEmployee: async (employeeId) => {
+    const { data, error } = await supabase.from('bills').select('*').eq('employee_id', employeeId).order('date', { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  create: async (bill) => {
+    const { data, error } = await supabase.from('bills').insert([bill]).select();
+    if (error) throw error;
+    return data[0];
+  },
+  update: async (id, updates) => {
+    const { data, error } = await supabase.from('bills').update(updates).eq('id', id).select();
+    if (error) throw error;
+    return data[0];
+  },
+  delete: async (id) => {
+    const { error } = await supabase.from('bills').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+};
+
 export default {
   workEntries: workEntriesApi,
+  bills: billsApi,
   employees: employeesApi,
   events: eventsApi
 } 

@@ -5,7 +5,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { TimePicker, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
-import { workEntriesApi, employeesApi, eventsApi } from '../services/supabaseApi';
+import { workEntriesApi, employeesApi, eventsApi, billsApi } from '../services/supabaseApi';
 
 function AdminDashboard() {
   const [workEntries, setWorkEntries] = useState([]);
@@ -28,6 +28,7 @@ function AdminDashboard() {
   const [newEmployee, setNewEmployee] = useState({ name: '', password: '' });
   const [events, setEvents] = useState([]);
   const [newEventName, setNewEventName] = useState('');
+  const [bills, setBills] = useState([]);
   const navigate = useNavigate();
 
   // New state for employees management
@@ -64,6 +65,7 @@ function AdminDashboard() {
     fetchWorkEntries();
     fetchEmployees();
     fetchEvents();
+    fetchBills();
   }, []);
 
   const fetchEvents = async () => {
@@ -73,6 +75,10 @@ function AdminDashboard() {
     } catch (error) {
       console.error('Error fetching events:', error);
     }
+  };
+
+  const fetchBills = async () => {
+    setBills(await billsApi.getAll());
   };
 
   // Helper for sorting
@@ -484,6 +490,29 @@ function AdminDashboard() {
     return payments.reduce((total, payment) => total + parseFloat(payment.totalPayment), 0).toFixed(2);
   };
 
+  const getTotalBillsForDate = (date, employeeId) => {
+    return bills.filter(bill => bill.date === date && bill.employee_id === employeeId).reduce((total, bill) => total + parseFloat(bill.amount), 0);
+  };
+
+  const getTotalBillsForEmployee = (employeeId) => {
+    return bills.filter(bill => {
+      const billDate = dayjs(bill.date);
+      const matchesEmployee = bill.employee_id === employeeId;
+      const matchesMonth = appliedPaymentFilterMonth ? billDate.format('MM') === appliedPaymentFilterMonth : true;
+      const matchesYear = appliedPaymentFilterYear ? billDate.format('YYYY') === appliedPaymentFilterYear : true;
+      return matchesEmployee && matchesMonth && matchesYear;
+    }).reduce((total, bill) => total + parseFloat(bill.amount), 0);
+  };
+
+  const getTotalBillsForEmployeeInMonth = (employeeId, month) => {
+    return bills.filter(bill => {
+      const billDate = dayjs(bill.date);
+      const matchesEmployee = bill.employee_id === employeeId;
+      const matchesMonth = billDate.format('YYYY-MM') === month;
+      return matchesEmployee && matchesMonth;
+    }).reduce((total, bill) => total + parseFloat(bill.amount), 0);
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -633,7 +662,6 @@ function AdminDashboard() {
                 <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>ID</TableCell>
                       <TableCell>Event Name</TableCell>
                       <TableCell>Created At</TableCell>
                       <TableCell>Actions</TableCell>
@@ -642,7 +670,6 @@ function AdminDashboard() {
                   <TableBody>
                     {events.map((event) => (
                       <TableRow key={event.id}>
-                        <TableCell>{event.id}</TableCell>
                         <TableCell>{event.name}</TableCell>
                         <TableCell>
                           {dayjs(event.created_at).format('MMM DD, YYYY')}
@@ -743,35 +770,15 @@ function AdminDashboard() {
                 </Grid>
               </Box>
 
-              {/* Total Company Payment */}
-              {(appliedPaymentFilterEmployee || appliedPaymentFilterMonth || appliedPaymentFilterYear) && (
-                <Box sx={{ mb: 2, p: 2, backgroundColor: 'primary.main', color: 'white', borderRadius: 1 }}>
-                  <Typography variant="h6">
-                    Total Company Payment: ${getTotalCompanyPayment()}
-                  </Typography>
-                  <Typography variant="body2">
-                    Hourly Rate: $10.00 | Period: {appliedPaymentFilterEmployee ? 
-                      `${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown'} - ` : ''}
-                    {appliedPaymentFilterMonth && appliedPaymentFilterYear ? 
-                      `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}` : 
-                      appliedPaymentFilterMonth 
-                        ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
-                        : appliedPaymentFilterYear
-                          ? `${appliedPaymentFilterYear}`
-                          : 'All Time'}
-                  </Typography>
-                </Box>
-              )}
-
               {/* Total Breakdown Heading */}
               {(appliedPaymentFilterEmployee || appliedPaymentFilterMonth || appliedPaymentFilterYear) && (
                 <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2 }}>
                   {appliedPaymentFilterEmployee 
-                    ? `Total Breakdown for ${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name || 'Unknown Employee'}`
-                    : 'Total Breakdown'
+                    ? `Payments for ${employees.find(emp => emp.id === parseInt(appliedPaymentFilterEmployee))?.name}`
+                    : 'All Employees'
                   }
-                  {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
-                    ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
+                  {(appliedPaymentFilterMonth || appliedPaymentFilterYear) &&
+                    ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear
                       ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
                       : appliedPaymentFilterMonth
                         ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
@@ -781,6 +788,15 @@ function AdminDashboard() {
                     }`
                   }
                 </Typography>
+              )}
+
+              {/* Total Company Payment */}
+              {(appliedPaymentFilterEmployee || appliedPaymentFilterMonth || appliedPaymentFilterYear) && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                  <Typography variant="h6">
+                    Total Company Payment: ${getTotalCompanyPayment()}
+                  </Typography>
+                </Box>
               )}
 
               {/* Payments Table */}
@@ -793,6 +809,8 @@ function AdminDashboard() {
                         <TableCell>Total Hours</TableCell>
                         <TableCell>Hourly Rate</TableCell>
                         <TableCell>Total Payment</TableCell>
+                        <TableCell>Total Bills</TableCell>
+                        <TableCell>Final Pay</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -808,6 +826,14 @@ function AdminDashboard() {
                           <TableCell>
                             <Typography variant="subtitle1" fontWeight="bold" color="primary">
                               ${payment.totalPayment}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            ${getTotalBillsForEmployee(payment.id).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                              ${(parseFloat(payment.totalPayment) + getTotalBillsForEmployee(payment.id)).toFixed(2)}
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -830,6 +856,8 @@ function AdminDashboard() {
                           <TableCell>Month</TableCell>
                           <TableCell>Total Hours</TableCell>
                           <TableCell>Payment</TableCell>
+                          <TableCell>Bills</TableCell>
+                          <TableCell>Final Pay</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -848,6 +876,14 @@ function AdminDashboard() {
                             <TableCell>
                               <Typography variant="body1" fontWeight="bold" color="primary">
                                 ${(hours * 10).toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              ${getTotalBillsForEmployeeInMonth(parseInt(appliedPaymentFilterEmployee), month).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body1" fontWeight="bold" color="primary">
+                                ${(hours * 10 + getTotalBillsForEmployeeInMonth(parseInt(appliedPaymentFilterEmployee), month)).toFixed(2)}
                               </Typography>
                             </TableCell>
                           </TableRow>
@@ -1033,15 +1069,9 @@ function AdminDashboard() {
                       <TableCell>To Time</TableCell>
                       <TableCell>Hours</TableCell>
                       <TableCell>Pay</TableCell>
-                      <TableCell key="event" sortDirection={orderBy === 'event' ? order : false}>
-                        <TableSortLabel
-                          active={orderBy === 'event'}
-                          direction={orderBy === 'event' ? order : 'asc'}
-                          onClick={(event) => handleRequestSort(event, 'event')}
-                        >
-                          Event
-                        </TableSortLabel>
-                      </TableCell>
+                      <TableCell>Bills</TableCell>
+                      <TableCell>Final Pay</TableCell>
+                      <TableCell>Event</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -1099,11 +1129,13 @@ function AdminDashboard() {
                               <TextField value={editedEntry.hours} InputProps={{ readOnly: true }} fullWidth />
                             </TableCell>
                             <TableCell>
-                              <TextField 
-                                value={`$${(parseFloat(editedEntry.hours) * 10).toFixed(2)}`} 
-                                InputProps={{ readOnly: true }} 
-                                fullWidth 
-                              />
+                              ${(parseFloat(editedEntry.hours) * 10).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              ${getTotalBillsForDate(editedEntry.date, editedEntry.employee_id)}
+                            </TableCell>
+                            <TableCell>
+                              ${(parseFloat(editedEntry.hours) * 10 + getTotalBillsForDate(editedEntry.date, editedEntry.employee_id)).toFixed(2)}
                             </TableCell>
                             <TableCell>
                               <TextField value={editedEntry.event} onChange={(e) => setEditedEntry({ ...editedEntry, event: e.target.value })} fullWidth />
@@ -1126,9 +1158,13 @@ function AdminDashboard() {
                             <TableCell>{entry.to_time ? formatTime(entry.to_time) : ''}</TableCell>
                             <TableCell>{entry.hours}</TableCell>
                             <TableCell>
-                              <Typography variant="body2" fontWeight="bold" color="primary">
-                                ${(parseFloat(entry.hours) * 10).toFixed(2)}
-                              </Typography>
+                              ${(parseFloat(entry.hours) * 10).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              ${getTotalBillsForDate(entry.date, entry.employee_id)}
+                            </TableCell>
+                            <TableCell>
+                              ${(parseFloat(entry.hours) * 10 + getTotalBillsForDate(entry.date, entry.employee_id)).toFixed(2)}
                             </TableCell>
                             <TableCell>{entry.event}</TableCell>
                             <TableCell>
