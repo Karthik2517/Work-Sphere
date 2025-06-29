@@ -525,9 +525,9 @@ function AdminDashboard() {
           mb: 4, 
           gap: 2,
           p: 3,
-          background: 'linear-gradient(135deg, #556cd6 0%, #7c8de8 100%)',
+          background: 'transparent',
           borderRadius: 3,
-          color: 'white'
+          color: '#333'
         }}>
           <Typography 
             variant="h4" 
@@ -536,7 +536,7 @@ function AdminDashboard() {
               textAlign: { xs: 'center', sm: 'left' },
               fontWeight: 700,
               letterSpacing: '0.5px',
-              color: 'white'
+              color: '#333'
             }}
           >
             Admin Dashboard
@@ -546,12 +546,12 @@ function AdminDashboard() {
               variant={showEmployeesTable ? "contained" : "outlined"} 
               onClick={() => setShowEmployeesTable(!showEmployeesTable)}
               sx={{
-                background: showEmployeesTable ? 'rgba(255,255,255,0.2)' : 'transparent',
-                border: '2px solid rgba(255,255,255,0.3)',
-                color: 'white',
+                background: showEmployeesTable ? '#556cd6' : 'transparent',
+                border: '2px solid rgba(85, 108, 214, 0.3)',
+                color: showEmployeesTable ? 'white' : '#333',
                 '&:hover': {
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '2px solid rgba(255,255,255,0.5)'
+                  background: showEmployeesTable ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
@@ -561,12 +561,12 @@ function AdminDashboard() {
               variant={showEventsTable ? "contained" : "outlined"} 
               onClick={() => setShowEventsTable(!showEventsTable)}
               sx={{
-                background: showEventsTable ? 'rgba(255,255,255,0.2)' : 'transparent',
-                border: '2px solid rgba(255,255,255,0.3)',
-                color: 'white',
+                background: showEventsTable ? '#556cd6' : 'transparent',
+                border: '2px solid rgba(85, 108, 214, 0.3)',
+                color: showEventsTable ? 'white' : '#333',
                 '&:hover': {
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '2px solid rgba(255,255,255,0.5)'
+                  background: showEventsTable ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
@@ -576,12 +576,12 @@ function AdminDashboard() {
               variant={showPaymentsTable ? "contained" : "outlined"} 
               onClick={() => setShowPaymentsTable(!showPaymentsTable)}
               sx={{
-                background: showPaymentsTable ? 'rgba(255,255,255,0.2)' : 'transparent',
-                border: '2px solid rgba(255,255,255,0.3)',
-                color: 'white',
+                background: showPaymentsTable ? '#556cd6' : 'transparent',
+                border: '2px solid rgba(85, 108, 214, 0.3)',
+                color: showPaymentsTable ? 'white' : '#333',
                 '&:hover': {
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '2px solid rgba(255,255,255,0.5)'
+                  background: showPaymentsTable ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
@@ -591,11 +591,11 @@ function AdminDashboard() {
               variant="outlined" 
               onClick={handleLogout}
               sx={{
-                border: '2px solid rgba(255,255,255,0.3)',
-                color: 'white',
+                border: '2px solid rgba(85, 108, 214, 0.3)',
+                color: '#333',
                 '&:hover': {
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '2px solid rgba(255,255,255,0.5)'
+                  background: 'rgba(85, 108, 214, 0.1)',
+                  border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
@@ -726,7 +726,6 @@ function AdminDashboard() {
                   <TableHead>
                     <TableRow>
                       <TableCell>Event Name</TableCell>
-                      <TableCell>Created At</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -734,9 +733,6 @@ function AdminDashboard() {
                     {events.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell>{event.name}</TableCell>
-                        <TableCell>
-                          {dayjs(event.created_at).format('MMM DD, YYYY')}
-                        </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
                             <Button 
