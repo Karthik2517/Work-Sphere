@@ -516,28 +516,91 @@ function AdminDashboard() {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, mb: 4, gap: 2 }}>
-          <Typography variant="h4" component="h1" sx={{ textAlign: { xs: 'center', sm: 'left' } }}>Admin Dashboard</Typography>
+        {/* Royal/Elegant Top Row Only */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'stretch', sm: 'center' }, 
+          mb: 4, 
+          gap: 2,
+          p: 3,
+          background: 'linear-gradient(135deg, #556cd6 0%, #7c8de8 100%)',
+          borderRadius: 3,
+          color: 'white'
+        }}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              textAlign: { xs: 'center', sm: 'left' },
+              fontWeight: 700,
+              letterSpacing: '0.5px',
+              color: 'white'
+            }}
+          >
+            Admin Dashboard
+          </Typography>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
             <Button 
               variant={showEmployeesTable ? "contained" : "outlined"} 
               onClick={() => setShowEmployeesTable(!showEmployeesTable)}
+              sx={{
+                background: showEmployeesTable ? 'rgba(255,255,255,0.2)' : 'transparent',
+                border: '2px solid rgba(255,255,255,0.3)',
+                color: 'white',
+                '&:hover': {
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '2px solid rgba(255,255,255,0.5)'
+                }
+              }}
             >
               {showEmployeesTable ? "Hide Employees" : "Show All Employees"}
             </Button>
             <Button 
               variant={showEventsTable ? "contained" : "outlined"} 
               onClick={() => setShowEventsTable(!showEventsTable)}
+              sx={{
+                background: showEventsTable ? 'rgba(255,255,255,0.2)' : 'transparent',
+                border: '2px solid rgba(255,255,255,0.3)',
+                color: 'white',
+                '&:hover': {
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '2px solid rgba(255,255,255,0.5)'
+                }
+              }}
             >
               {showEventsTable ? "Hide Events" : "Show All Events"}
             </Button>
             <Button 
               variant={showPaymentsTable ? "contained" : "outlined"} 
               onClick={() => setShowPaymentsTable(!showPaymentsTable)}
+              sx={{
+                background: showPaymentsTable ? 'rgba(255,255,255,0.2)' : 'transparent',
+                border: '2px solid rgba(255,255,255,0.3)',
+                color: 'white',
+                '&:hover': {
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '2px solid rgba(255,255,255,0.5)'
+                }
+              }}
             >
               {showPaymentsTable ? "Hide Payments" : "Show Payments"}
             </Button>
-            <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+            <Button 
+              variant="outlined" 
+              onClick={handleLogout}
+              sx={{
+                border: '2px solid rgba(255,255,255,0.3)',
+                color: 'white',
+                '&:hover': {
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '2px solid rgba(255,255,255,0.5)'
+                }
+              }}
+            >
+              Logout
+            </Button>
           </Box>
         </Box>
 
@@ -1230,7 +1293,7 @@ function AdminDashboard() {
         </DialogActions>
       </Dialog>
 
-      </LocalizationProvider>
+    </LocalizationProvider>
   );
 }
 

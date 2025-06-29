@@ -249,9 +249,45 @@ function EmployeeDashboard() {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, mb: 2 }}>
-          <Typography variant="h4">{employee ? `${employee.name}'s Dashboard` : 'Employee Dashboard'}</Typography>
-          <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+        {/* Royal/Elegant Top Row Only */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'stretch', sm: 'center' }, 
+          mb: 4, 
+          gap: 2,
+          p: 3,
+          background: 'linear-gradient(135deg, #556cd6 0%, #7c8de8 100%)',
+          borderRadius: 3,
+          color: 'white'
+        }}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              textAlign: { xs: 'center', sm: 'left' },
+              fontWeight: 700,
+              letterSpacing: '0.5px',
+              color: 'white'
+            }}
+          >
+            {employee ? `${employee.name}'s Dashboard` : 'Employee Dashboard'}
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={handleLogout}
+            sx={{
+              border: '2px solid rgba(255,255,255,0.3)',
+              color: 'white',
+              '&:hover': {
+                background: 'rgba(255,255,255,0.1)',
+                border: '2px solid rgba(255,255,255,0.5)'
+              }
+            }}
+          >
+            Logout
+          </Button>
         </Box>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
