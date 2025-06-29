@@ -48,8 +48,8 @@ function LoginPage() {
             Work Sphere
           </Typography>
           <Box sx={{ mb: 2, display: 'flex', gap: 1, width: '100%', justifyContent: 'center' }}>
-            <Button onClick={() => setRole('employee')} variant={role === 'employee' ? 'contained' : 'outlined'} sx={{ flexGrow: 1 }}>Employee</Button>
-            <Button onClick={() => setRole('admin')} variant={role === 'admin' ? 'contained' : 'outlined'} sx={{ flexGrow: 1 }}>Admin</Button>
+            <Button onClick={() => { setRole('employee'); setUsername(''); setPassword(''); }} variant={role === 'employee' ? 'contained' : 'outlined'} sx={{ flexGrow: 1 }}>Employee</Button>
+            <Button onClick={() => { setRole('admin'); setUsername(''); setPassword(''); }} variant={role === 'admin' ? 'contained' : 'outlined'} sx={{ flexGrow: 1 }}>Admin</Button>
           </Box>
           <TextField
             margin="normal"
