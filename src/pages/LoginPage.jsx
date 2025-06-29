@@ -21,6 +21,9 @@ function LoginPage() {
       const user = await employeesApi.authenticate(username, password);
       
       if (user && user.role === role) {
+        // Store user information in localStorage
+        localStorage.setItem('user', JSON.stringify(user));
+        
         if (user.role === 'admin') {
           navigate('/admin');
         } else if (user.role === 'employee') {

@@ -51,6 +51,15 @@ function AdminDashboard() {
   const [appliedPaymentFilterYear, setAppliedPaymentFilterYear] = useState('');
   const [appliedPaymentFilterEmployee, setAppliedPaymentFilterEmployee] = useState('');
 
+  // Check if user is authenticated
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || user.role !== 'admin') {
+      navigate('/');
+      return;
+    }
+  }, [navigate]);
+
   useEffect(() => {
     fetchWorkEntries();
     fetchEmployees();
@@ -213,6 +222,7 @@ function AdminDashboard() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('user');
     navigate('/');
   };
 
