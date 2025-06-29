@@ -477,9 +477,9 @@ function AdminDashboard() {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" component="h1">Admin Dashboard</Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, mb: 4, gap: 2 }}>
+          <Typography variant="h4" component="h1" sx={{ textAlign: { xs: 'center', sm: 'left' } }}>Admin Dashboard</Typography>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
             <Button 
               variant={showEmployeesTable ? "contained" : "outlined"} 
               onClick={() => setShowEmployeesTable(!showEmployeesTable)}
@@ -505,7 +505,7 @@ function AdminDashboard() {
         {/* All Employees Table Section */}
         {showEmployeesTable && (
           <Grid item xs={12} sx={{ mb: 3 }}>
-            <Paper sx={{ p: 2 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               {/* Add New Employee Section */}
               <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
                 <Typography variant="h6" gutterBottom>Add New Employee</Typography>
@@ -527,7 +527,7 @@ function AdminDashboard() {
                       fullWidth
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
                     <Button variant="contained" onClick={handleAddEmployee} fullWidth>Add Employee</Button>
                   </Grid>
                 </Grid>
@@ -535,7 +535,7 @@ function AdminDashboard() {
               
               <Typography variant="h6" gutterBottom>All Employees</Typography>
               <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table sx={{ minWidth: 600 }}>
+                <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>ID</TableCell>
@@ -567,7 +567,7 @@ function AdminDashboard() {
                           {dayjs(employee.created_at).format('MMM DD, YYYY')}
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
                             <Button 
                               size="small" 
                               variant="outlined" 
@@ -599,7 +599,7 @@ function AdminDashboard() {
         {/* All Events Table Section */}
         {showEventsTable && (
           <Grid item xs={12} sx={{ mb: 3 }}>
-            <Paper sx={{ p: 2 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               {/* Add New Event Section */}
               <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
                 <Typography variant="h6" gutterBottom>Add New Event</Typography>
@@ -612,7 +612,7 @@ function AdminDashboard() {
                       fullWidth
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
                     <Button variant="contained" onClick={handleAddEvent} fullWidth>Add Event</Button>
                   </Grid>
                 </Grid>
@@ -620,7 +620,7 @@ function AdminDashboard() {
               
               <Typography variant="h6" gutterBottom>All Events</Typography>
               <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table sx={{ minWidth: 600 }}>
+                <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>ID</TableCell>
@@ -638,7 +638,7 @@ function AdminDashboard() {
                           {dayjs(event.created_at).format('MMM DD, YYYY')}
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
                             <Button 
                               size="small" 
                               variant="outlined" 
@@ -668,7 +668,7 @@ function AdminDashboard() {
         {/* Payments Section */}
         {showPaymentsTable && (
           <Grid item xs={12} sx={{ mb: 3 }}>
-            <Paper sx={{ p: 2 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h6" gutterBottom>Employee Payments</Typography>
               
               {/* Payment Filters */}
@@ -726,7 +726,7 @@ function AdminDashboard() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={3} sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <Grid item xs={12} sm={3} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
                     <Button variant="contained" onClick={handleApplyPaymentFilter} fullWidth>Apply Filter</Button>
                     <Button variant="outlined" onClick={handleResetPaymentFilters} fullWidth>Reset</Button>
                   </Grid>
@@ -763,10 +763,10 @@ function AdminDashboard() {
                   {(appliedPaymentFilterMonth || appliedPaymentFilterYear) && 
                     ` - ${appliedPaymentFilterMonth && appliedPaymentFilterYear 
                       ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')} ${appliedPaymentFilterYear}`
-                      : appliedPaymentFiltermonth 
-                        ? `${dayjs().month(parseInt(appliedPaymentFiltermonth) - 1).format('MMMM')}`
-                        : appliedPaymentFilteryear
-                          ? `${appliedPaymentFilteryear}`
+                      : appliedPaymentFilterMonth
+                        ? `${dayjs().month(parseInt(appliedPaymentFilterMonth) - 1).format('MMMM')}`
+                        : appliedPaymentFilterYear
+                          ? `${appliedPaymentFilterYear}`
                           : ''
                     }`
                   }
@@ -776,7 +776,7 @@ function AdminDashboard() {
               {/* Payments Table */}
               {(appliedPaymentFilterEmployee || appliedPaymentFilterMonth || appliedPaymentFilterYear) && (
                 <TableContainer sx={{ overflowX: 'auto' }}>
-                  <Table sx={{ minWidth: 600 }}>
+                  <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>Employee Name</TableCell>
@@ -854,7 +854,7 @@ function AdminDashboard() {
         <Grid container spacing={3}>
           {/* Add New Work Entry Section */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h6" gutterBottom>Add New Work Entry</Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={4}>
@@ -923,7 +923,7 @@ function AdminDashboard() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
                   <Button variant="contained" onClick={handleAddEntry} fullWidth>Add Entry</Button>
                   <Button variant="outlined" onClick={handleResetNewEntry} fullWidth>Reset</Button>
                 </Grid>
@@ -933,79 +933,79 @@ function AdminDashboard() {
 
           {/* Filter Work Entries Section */}
           <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Filter Work Entries</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth>
-                  <InputLabel id="filter-employee-label">Employee</InputLabel>
-                  <Select
-                    labelId="filter-employee-label"
-                    id="filter-employee"
-                    label="Employee"
-                    value={filterEmployeeId}
-                    onChange={(e) => setFilterEmployeeId(e.target.value)}
-                  >
-                    <MenuItem value="">All Employees</MenuItem>
-                    {employees.filter(emp => emp.role !== 'admin').map(emp => (
-                      <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h6" gutterBottom>Filter Work Entries</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth>
+                    <InputLabel id="filter-employee-label">Employee</InputLabel>
+                    <Select
+                      labelId="filter-employee-label"
+                      id="filter-employee"
+                      label="Employee"
+                      value={filterEmployeeId}
+                      onChange={(e) => setFilterEmployeeId(e.target.value)}
+                    >
+                      <MenuItem value="">All Employees</MenuItem>
+                      {employees.filter(emp => emp.role !== 'admin').map(emp => (
+                        <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth>
-                  <InputLabel id="filter-month-label">Month</InputLabel>
-                  <Select
-                    labelId="filter-month-label"
-                    id="filter-month"
-                    label="Month"
-                    value={filterMonth}
-                    onChange={(e) => setFilterMonth(e.target.value)}
-                  >
-                    <MenuItem value="">All Months</MenuItem>
-                    {[...Array(12).keys()].map(month => (
-                      <MenuItem key={month + 1} value={String(month + 1).padStart(2, '0')}>
-                        {dayjs().month(month).format('MMMM')}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth>
+                    <InputLabel id="filter-month-label">Month</InputLabel>
+                    <Select
+                      labelId="filter-month-label"
+                      id="filter-month"
+                      label="Month"
+                      value={filterMonth}
+                      onChange={(e) => setFilterMonth(e.target.value)}
+                    >
+                      <MenuItem value="">All Months</MenuItem>
+                      {[...Array(12).keys()].map(month => (
+                        <MenuItem key={month + 1} value={String(month + 1).padStart(2, '0')}>
+                          {dayjs().month(month).format('MMMM')}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth>
-                  <InputLabel id="filter-year-label">Year</InputLabel>
-                  <Select
-                    labelId="filter-year-label"
-                    id="filter-year"
-                    label="Year"
-                    value={filterYear}
-                    onChange={(e) => setFilterYear(e.target.value)}
-                  >
-                    <MenuItem value="">All Years</MenuItem>
-                    {[...Array(5).keys()].map(i => {
-                      const year = dayjs().year() - 2 + i;
-                      return <MenuItem key={year} value={String(year)}>{year}</MenuItem>;
-                    })}
-                  </Select>
-                </FormControl>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth>
+                    <InputLabel id="filter-year-label">Year</InputLabel>
+                    <Select
+                      labelId="filter-year-label"
+                      id="filter-year"
+                      label="Year"
+                      value={filterYear}
+                      onChange={(e) => setFilterYear(e.target.value)}
+                    >
+                      <MenuItem value="">All Years</MenuItem>
+                      {[...Array(5).keys()].map(i => {
+                        const year = dayjs().year() - 2 + i;
+                        return <MenuItem key={year} value={String(year)}>{year}</MenuItem>;
+                      })}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-end', gap: 1 }}>
+                  <Button variant="contained" onClick={handleApplyFilter} fullWidth>Filter</Button>
+                  <Button variant="outlined" onClick={handleResetFilters} fullWidth>Reset</Button>
+                </Grid>
               </Grid>
-            <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                <Button variant="contained" onClick={handleApplyFilter} fullWidth>Filter</Button>
-                <Button variant="outlined" onClick={handleResetFilters} fullWidth>Reset</Button>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
+            </Paper>
+          </Grid>
 
           {/* Work Entries Table Section */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
+            <Paper sx={{ p: { xs: 1, sm: 2 } }}>
               <Typography variant="h6" gutterBottom>Work Entries</Typography>
               <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table sx={{ minWidth: 700 }}>
+                <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                   <TableHead>
                     <TableRow>
                       <TableCell key="employee_id" sortDirection={orderBy === 'employee_id' ? order : false}>
@@ -1107,8 +1107,10 @@ function AdminDashboard() {
                               <TextField value={editedEntry.event} onChange={(e) => setEditedEntry({ ...editedEntry, event: e.target.value })} fullWidth />
                             </TableCell>
                             <TableCell>
-                              <Button onClick={handleSaveEdit}>Save</Button>
-                              <Button onClick={handleCancelEdit}>Cancel</Button>
+                              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
+                                <Button size="small" variant="contained" onClick={handleSaveEdit}>Save</Button>
+                                <Button size="small" variant="outlined" onClick={handleCancelEdit}>Cancel</Button>
+                              </Box>
                             </TableCell>
                           </>
                         ) : (
@@ -1128,8 +1130,10 @@ function AdminDashboard() {
                             </TableCell>
                             <TableCell>{entry.event}</TableCell>
                             <TableCell>
-                              <Button onClick={() => handleEditClick(entry)}>Edit</Button>
-                              <Button onClick={() => handleDeleteClick(entry.id)}>Delete</Button>
+                              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
+                                <Button size="small" variant="outlined" onClick={() => handleEditClick(entry)}>Edit</Button>
+                                <Button size="small" variant="outlined" color="error" onClick={() => handleDeleteClick(entry.id)}>Delete</Button>
+                              </Box>
                             </TableCell>
                           </>
                         )}
@@ -1146,7 +1150,7 @@ function AdminDashboard() {
       {/* Edit Employee Dialog */}
       <Dialog open={editEmployeeDialogOpen} onClose={handleCancelEmployeeEdit} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Employee</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label="Name"
@@ -1161,21 +1165,9 @@ function AdminDashboard() {
               onChange={(e) => setEditedEmployee({ ...editedEmployee, password: e.target.value })}
               fullWidth
             />
-            <FormControl fullWidth>
-              <InputLabel id="role-select-label">Role</InputLabel>
-              <Select
-                labelId="role-select-label"
-                value={editedEmployee.role}
-                label="Role"
-                onChange={(e) => setEditedEmployee({ ...editedEmployee, role: e.target.value })}
-              >
-                <MenuItem value="employee">Employee</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
-              </Select>
-            </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: { xs: 2, sm: 3 } }}>
           <Button onClick={handleCancelEmployeeEdit}>Cancel</Button>
           <Button onClick={handleSaveEmployeeEdit} variant="contained">Save</Button>
         </DialogActions>
@@ -1184,7 +1176,7 @@ function AdminDashboard() {
       {/* Edit Event Dialog */}
       <Dialog open={editEventDialogOpen} onClose={handleCancelEventEdit} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Event</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label="Event Name"
@@ -1194,7 +1186,7 @@ function AdminDashboard() {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: { xs: 2, sm: 3 } }}>
           <Button onClick={handleCancelEventEdit}>Cancel</Button>
           <Button onClick={handleSaveEventEdit} variant="contained">Save</Button>
         </DialogActions>
