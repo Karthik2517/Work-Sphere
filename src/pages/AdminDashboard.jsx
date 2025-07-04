@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, TableSortLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, TableSortLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, Pagination } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { TimePicker, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
-import { workEntriesApi, employeesApi, eventsApi, billsApi } from '../services/supabaseApi';
+import { workEntriesApi, employeesApi, eventsApi, billsApi, paymentsApi } from '../services/supabaseApi';
 
 function AdminDashboard() {
   const [workEntries, setWorkEntries] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [newEntry, setNewEntry] = useState({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '' });
+  const [newEntry, setNewEntry] = useState({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '', description: '' });
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [editedEntry, setEditedEntry] = useState(null);
   const [order, setOrder] = useState('asc');
@@ -32,13 +33,12 @@ function AdminDashboard() {
   const navigate = useNavigate();
 
   // New state for employees management
-  const [showEmployeesTable, setShowEmployeesTable] = useState(false);
+  const [showEmployeesEventsTab, setShowEmployeesEventsTab] = useState(false);
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
   const [editedEmployee, setEditedEmployee] = useState({ name: '', password: '', role: 'employee' });
   const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
 
   // New state for events management
-  const [showEventsTable, setShowEventsTable] = useState(false);
   const [editingEventId, setEditingEventId] = useState(null);
   const [editedEvent, setEditedEvent] = useState({ name: '' });
   const [editEventDialogOpen, setEditEventDialogOpen] = useState(false);
@@ -51,6 +51,27 @@ function AdminDashboard() {
   const [appliedPaymentFilterMonth, setAppliedPaymentFilterMonth] = useState('');
   const [appliedPaymentFilterYear, setAppliedPaymentFilterYear] = useState('');
   const [appliedPaymentFilterEmployee, setAppliedPaymentFilterEmployee] = useState('');
+
+  // New state for outstanding balances
+  const [showOutstandingBalances, setShowOutstandingBalances] = useState(false);
+  const [outstandingBalances, setOutstandingBalances] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [settlementDialogOpen, setSettlementDialogOpen] = useState(false);
+  const [selectedEmployeeForPayment, setSelectedEmployeeForPayment] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(dayjs());
+  const [paymentDescription, setPaymentDescription] = useState('');
+  const [loadingBalances, setLoadingBalances] = useState(false);
+
+  // Add state for pagination
+  const [employeesPage, setEmployeesPage] = useState(1);
+  const [eventsPage, setEventsPage] = useState(1);
+  const EMPLOYEES_PER_PAGE = 5;
+  const EVENTS_PER_PAGE = 5;
+
+  // Add state for work entries pagination
+  const [workEntriesPage, setWorkEntriesPage] = useState(1);
+  const WORK_ENTRIES_PER_PAGE = 5;
 
   // Check if user is authenticated
   useEffect(() => {
@@ -66,6 +87,7 @@ function AdminDashboard() {
     fetchEmployees();
     fetchEvents();
     fetchBills();
+    fetchPayments();
   }, []);
 
   const fetchEvents = async () => {
@@ -79,6 +101,15 @@ function AdminDashboard() {
 
   const fetchBills = async () => {
     setBills(await billsApi.getAll());
+  };
+
+  const fetchPayments = async () => {
+    try {
+      const data = await paymentsApi.getAll();
+      setPayments(data);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    }
   };
 
   // Helper for sorting
@@ -177,20 +208,54 @@ function AdminDashboard() {
 
   const handleAddEntry = async () => {
     try {
-      const addedEntry = await workEntriesApi.create({ 
-        ...newEntry, 
-        employee_id: parseInt(newEntry.employee_id), 
-        hours: parseFloat(newEntry.hours) 
-      });
-      setWorkEntries([...workEntries, addedEntry]);
-      setNewEntry({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '' });
+      // If no employees selected, use the single employee selection
+      const employeesToAdd = selectedEmployees.length > 0 
+        ? selectedEmployees 
+        : [newEntry.employee_id];
+
+      if (employeesToAdd.length === 0 || (employeesToAdd.length === 1 && !employeesToAdd[0])) {
+        alert('Please select at least one employee');
+        return;
+      }
+
+      const addedEntries = [];
+      
+      for (const employeeId of employeesToAdd) {
+        if (employeeId) {
+                const entryData = {
+        employee_id: parseInt(employeeId),
+        date: newEntry.date,
+        day: newEntry.day,
+        hours: parseFloat(newEntry.hours),
+        from_time: newEntry.from_time,
+        to_time: newEntry.to_time,
+        event: newEntry.event,
+        description: newEntry.description
+      };
+          
+          const addedEntry = await workEntriesApi.create(entryData);
+          addedEntries.push(addedEntry);
+        }
+      }
+
+      setWorkEntries([...workEntries, ...addedEntries]);
+      
+      // Reset form
+      setNewEntry({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '', description: '' });
+      setSelectedEmployees([]);
+      
+      if (addedEntries.length > 1) {
+        alert(`Successfully added ${addedEntries.length} work entries!`);
+      }
     } catch (error) {
-      console.error('Error adding work entry:', error);
+      console.error('Error adding work entries:', error);
+      alert('Error adding work entries: ' + error.message);
     }
   };
 
   const handleResetNewEntry = () => {
-    setNewEntry({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '' });
+    setNewEntry({ employee_id: '', date: '', day: '', hours: '', from_time: '', to_time: '', event: '', description: '' });
+    setSelectedEmployees([]);
   };
 
   const handleEditClick = (entry) => {
@@ -524,6 +589,95 @@ function AdminDashboard() {
     }).reduce((total, bill) => total + parseFloat(bill.amount), 0);
   };
 
+  // Outstanding Balance Functions
+  const fetchOutstandingBalances = async () => {
+    setLoadingBalances(true);
+    try {
+      const balances = [];
+      const employeeList = employees.filter(emp => emp.role !== 'admin');
+      
+      for (const employee of employeeList) {
+        const balanceData = await paymentsApi.calculateOutstanding(employee.id);
+        if (balanceData.outstanding > 0) {
+          balances.push({
+            ...employee,
+            ...balanceData
+          });
+        }
+      }
+      
+      // Sort by outstanding amount (highest first)
+      balances.sort((a, b) => b.outstanding - a.outstanding);
+      setOutstandingBalances(balances);
+    } catch (error) {
+      console.error('Error fetching outstanding balances:', error);
+    } finally {
+      setLoadingBalances(false);
+    }
+  };
+
+  const handleShowOutstandingBalances = () => {
+    setShowOutstandingBalances(!showOutstandingBalances);
+    if (!showOutstandingBalances) {
+      fetchOutstandingBalances();
+    }
+  };
+
+  const handleOpenPaymentDialog = (employee) => {
+    setSelectedEmployeeForPayment(employee);
+    setPaymentAmount(employee.outstanding.toString());
+    setPaymentDate(dayjs());
+    setPaymentDescription('');
+    setSettlementDialogOpen(true);
+  };
+
+  const handlePaymentSettlement = async () => {
+    try {
+      const paymentData = {
+        employee_id: selectedEmployeeForPayment.id,
+        amount: parseFloat(paymentAmount),
+        payment_date: paymentDate.format('YYYY-MM-DD'),
+        description: paymentDescription || `Payment settlement for ${selectedEmployeeForPayment.name}`
+      };
+      
+      await paymentsApi.create(paymentData);
+      await fetchPayments(); // Refresh payments
+      await fetchOutstandingBalances(); // Refresh balances
+      
+      setSettlementDialogOpen(false);
+      setSelectedEmployeeForPayment(null);
+      setPaymentAmount('');
+      setPaymentDescription('');
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Error processing payment. Please try again.');
+    }
+  };
+
+  const handleCancelPaymentDialog = () => {
+    setSettlementDialogOpen(false);
+    setSelectedEmployeeForPayment(null);
+    setPaymentAmount('');
+    setPaymentDescription('');
+  };
+
+  const calculateRemainingBalance = () => {
+    if (!selectedEmployeeForPayment || !paymentAmount) return selectedEmployeeForPayment?.outstanding || 0;
+    return Math.max(0, selectedEmployeeForPayment.outstanding - parseFloat(paymentAmount || 0));
+  };
+
+  const getTotalOutstandingAmount = () => {
+    return outstandingBalances.reduce((total, balance) => total + balance.outstanding, 0).toFixed(2);
+  };
+
+  // Filter out admin users for employees table
+  const filteredEmployees = employees.filter(emp => emp.role !== 'admin');
+  const paginatedEmployees = filteredEmployees.slice((employeesPage - 1) * EMPLOYEES_PER_PAGE, employeesPage * EMPLOYEES_PER_PAGE);
+  const paginatedEvents = events.slice((eventsPage - 1) * EVENTS_PER_PAGE, eventsPage * EVENTS_PER_PAGE);
+
+  // Paginate filteredWorkEntries
+  const paginatedWorkEntries = filteredWorkEntries.slice((workEntriesPage - 1) * WORK_ENTRIES_PER_PAGE, workEntriesPage * WORK_ENTRIES_PER_PAGE);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -554,34 +708,19 @@ function AdminDashboard() {
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
             <Button 
-              variant={showEmployeesTable ? "contained" : "outlined"} 
-              onClick={() => setShowEmployeesTable(!showEmployeesTable)}
+              variant={showEmployeesEventsTab ? "contained" : "outlined"} 
+              onClick={() => setShowEmployeesEventsTab(!showEmployeesEventsTab)}
               sx={{
-                background: showEmployeesTable ? '#556cd6' : 'transparent',
+                background: showEmployeesEventsTab ? '#556cd6' : 'transparent',
                 border: '2px solid rgba(85, 108, 214, 0.3)',
-                color: showEmployeesTable ? 'white' : '#333',
+                color: showEmployeesEventsTab ? 'white' : '#333',
                 '&:hover': {
-                  background: showEmployeesTable ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  background: showEmployeesEventsTab ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
                   border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
-              {showEmployeesTable ? "Hide Employees" : "Show All Employees"}
-            </Button>
-            <Button 
-              variant={showEventsTable ? "contained" : "outlined"} 
-              onClick={() => setShowEventsTable(!showEventsTable)}
-              sx={{
-                background: showEventsTable ? '#556cd6' : 'transparent',
-                border: '2px solid rgba(85, 108, 214, 0.3)',
-                color: showEventsTable ? 'white' : '#333',
-                '&:hover': {
-                  background: showEventsTable ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
-                  border: '2px solid rgba(85, 108, 214, 0.5)'
-                }
-              }}
-            >
-              {showEventsTable ? "Hide Events" : "Show All Events"}
+              {showEmployeesEventsTab ? "Hide Employees & Events" : "Employees & Events"}
             </Button>
             <Button 
               variant={showPaymentsTable ? "contained" : "outlined"} 
@@ -597,6 +736,21 @@ function AdminDashboard() {
               }}
             >
               {showPaymentsTable ? "Hide Payments" : "Show Payments"}
+            </Button>
+            <Button 
+              variant={showOutstandingBalances ? "contained" : "outlined"} 
+              onClick={handleShowOutstandingBalances}
+              sx={{
+                background: showOutstandingBalances ? '#d32f2f' : 'transparent',
+                border: '2px solid rgba(211, 47, 47, 0.3)',
+                color: showOutstandingBalances ? 'white' : '#333',
+                '&:hover': {
+                  background: showOutstandingBalances ? '#b71c1c' : 'rgba(211, 47, 47, 0.1)',
+                  border: '2px solid rgba(211, 47, 47, 0.5)'
+                }
+              }}
+            >
+              {showOutstandingBalances ? "Hide Balances" : "Outstanding Balances"}
             </Button>
             <Button 
               variant="outlined" 
@@ -616,159 +770,153 @@ function AdminDashboard() {
         </Box>
 
         {/* All Employees Table Section */}
-        {showEmployeesTable && (
-          <Grid item xs={12} sx={{ mb: 3 }}>
-            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-              {/* Add New Employee Section */}
-              <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Add New Employee</Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Name"
-                      value={newEmployee.name}
-                      onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                      fullWidth
-                    />
+        {showEmployeesEventsTab && (
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            {/* Employees Section */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+                {/* Add New Employee Section */}
+                <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Add New Employee</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Name"
+                        value={newEmployee.name}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Password"
+                        type="password"
+                        value={newEmployee.password}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Button variant="contained" onClick={handleAddEmployee} fullWidth>Add Employee</Button>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Password"
-                      type="password"
-                      value={newEmployee.password}
-                      onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
-                    <Button variant="contained" onClick={handleAddEmployee} fullWidth>Add Employee</Button>
-                  </Grid>
-                </Grid>
-              </Box>
-              
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>All Employees</Typography>
-              <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>ID</TableCell>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Role</TableCell>
-                      <TableCell>Created At</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {employees.map((employee) => (
-                      <TableRow key={employee.id}>
-                        <TableCell>{employee.id}</TableCell>
-                        <TableCell>{employee.name}</TableCell>
-                        <TableCell>
-                          <Box sx={{ 
-                            display: 'inline-block', 
-                            px: 1, 
-                            py: 0.5, 
-                            borderRadius: 1, 
-                            backgroundColor: employee.role === 'admin' ? 'primary.main' : 'secondary.main',
-                            color: 'white',
-                            fontSize: '0.75rem'
-                          }}>
-                            {employee.role}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          {dayjs(employee.created_at).format('MMM DD, YYYY')}
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              onClick={() => handleEditEmployee(employee)}
-                              disabled={employee.role === 'admin'}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              color="error" 
-                              onClick={() => handleDeleteEmployee(employee.id)}
-                              disabled={employee.role === 'admin'}
-                            >
-                              Delete
-                            </Button>
-                          </Box>
-                        </TableCell>
+                </Box>
+                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>All Employees</Typography>
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                  <Table sx={{ minWidth: { xs: 300, sm: 400 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-        )}
-
-        {/* All Events Table Section */}
-        {showEventsTable && (
-          <Grid item xs={12} sx={{ mb: 3 }}>
-            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-              {/* Add New Event Section */}
-              <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Add New Event</Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Event Name"
-                      value={newEventName}
-                      onChange={(e) => setNewEventName(e.target.value)}
-                      fullWidth
-                    />
+                    </TableHead>
+                    <TableBody>
+                      {paginatedEmployees.map((employee) => (
+                        <TableRow key={employee.id}>
+                          <TableCell>{employee.name}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
+                              <Button 
+                                size="small" 
+                                variant="outlined" 
+                                onClick={() => handleEditEmployee(employee)}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                size="small" 
+                                variant="outlined" 
+                                color="error" 
+                                onClick={() => handleDeleteEmployee(employee.id)}
+                              >
+                                Delete
+                              </Button>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Pagination
+                    count={Math.ceil(filteredEmployees.length / EMPLOYEES_PER_PAGE)}
+                    page={employeesPage}
+                    onChange={(_, value) => setEmployeesPage(value)}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+              </Paper>
+            </Grid>
+            {/* Events Section */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+                {/* Add New Event Section */}
+                <Box sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Add New Event</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Event Name"
+                        value={newEventName}
+                        onChange={(e) => setNewEventName(e.target.value)}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Button variant="contained" onClick={handleAddEvent} fullWidth>Add Event</Button>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
-                    <Button variant="contained" onClick={handleAddEvent} fullWidth>Add Event</Button>
-                  </Grid>
-                </Grid>
-              </Box>
-              
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>All Events</Typography>
-              <TableContainer sx={{ overflowX: 'auto', maxWidth: '400px' }}>
-                <Table sx={{ minWidth: '300px' }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ width: '60%' }}>Event Name</TableCell>
-                      <TableCell sx={{ width: '40%' }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {events.map((event) => (
-                      <TableRow key={event.id}>
-                        <TableCell>{event.name}</TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              onClick={() => handleEditEvent(event)}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              color="error" 
-                              onClick={() => handleDeleteEvent(event.id)}
-                            >
-                              Delete
-                            </Button>
-                          </Box>
-                        </TableCell>
+                </Box>
+                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>All Events</Typography>
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                  <Table sx={{ minWidth: { xs: 300, sm: 400 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedEvents.map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell>{event.name}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
+                              <Button 
+                                size="small" 
+                                variant="outlined" 
+                                onClick={() => handleEditEvent(event)}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                size="small" 
+                                variant="outlined" 
+                                color="error" 
+                                onClick={() => handleDeleteEvent(event.id)}
+                              >
+                                Delete
+                              </Button>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Pagination
+                    count={Math.ceil(events.length / EVENTS_PER_PAGE)}
+                    page={eventsPage}
+                    onChange={(_, value) => setEventsPage(value)}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+              </Paper>
+            </Grid>
           </Grid>
         )}
 
@@ -967,6 +1115,91 @@ function AdminDashboard() {
           </Grid>
         )}
 
+        {/* Outstanding Balances Section */}
+        {showOutstandingBalances && (
+          <Grid item xs={12} sx={{ mb: 3 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h6" gutterBottom sx={{ color: 'error.main' }}>
+                Outstanding Employee Balances
+              </Typography>
+              
+              {loadingBalances ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <Typography>Loading balances...</Typography>
+                </Box>
+              ) : outstandingBalances.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="h6" color="success.main">
+                    🎉 All employees are settled up! No outstanding balances.
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  {/* Total Outstanding Summary */}
+                  <Box sx={{ mb: 3, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+                    <Typography variant="h6" color="white">
+                      Total Outstanding Amount: ${getTotalOutstandingAmount()}
+                    </Typography>
+                  </Box>
+
+                  <TableContainer sx={{ overflowX: 'auto' }}>
+                    <Table sx={{ minWidth: { xs: 600, sm: 800 } }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Employee Name</TableCell>
+                          <TableCell>Total Owed</TableCell>
+                          <TableCell>Total Paid</TableCell>
+                          <TableCell>Outstanding</TableCell>
+                          <TableCell>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {outstandingBalances.map((employee) => (
+                          <TableRow key={employee.id}>
+                            <TableCell>
+                              <Typography variant="subtitle1" fontWeight="bold">
+                                {employee.name}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="primary">
+                                ${employee.totalOwed.toFixed(2)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                (Work: ${employee.totalWorkPay.toFixed(2)} + Bills: ${employee.totalBills.toFixed(2)})
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="success.main">
+                                ${employee.totalPaid.toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="subtitle1" fontWeight="bold" color="error">
+                                ${employee.outstanding.toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="contained" 
+                                color="primary"
+                                size="small"
+                                onClick={() => handleOpenPaymentDialog(employee)}
+                              >
+                                Settle Payment
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </>
+              )}
+            </Paper>
+          </Grid>
+        )}
+
         <Grid container spacing={3}>
           {/* Add New Work Entry Section */}
           <Grid item xs={12}>
@@ -975,13 +1208,22 @@ function AdminDashboard() {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={4}>
                   <FormControl fullWidth>
-                    <InputLabel id="employee-select-label">Employee</InputLabel>
+                    <InputLabel id="employee-select-label">Select Employees (Multiple)</InputLabel>
                     <Select
                       labelId="employee-select-label"
                       id="employee-select"
-                      value={newEntry.employee_id}
-                      label="Employee"
-                      onChange={(e) => setNewEntry({ ...newEntry, employee_id: e.target.value })}
+                      multiple
+                      value={selectedEmployees}
+                      label="Select Employees (Multiple)"
+                      onChange={(e) => setSelectedEmployees(e.target.value)}
+                      renderValue={(selected) => {
+                        if (selected.length === 0) return 'Select employees...';
+                        if (selected.length === 1) {
+                          const emp = employees.find(e => e.id === selected[0]);
+                          return emp ? emp.name : '';
+                        }
+                        return `${selected.length} employees selected`;
+                      }}
                     >
                       {employees.filter(emp => emp.role !== 'admin').map((emp) => (
                         <MenuItem key={emp.id} value={emp.id}>
@@ -990,6 +1232,19 @@ function AdminDashboard() {
                       ))}
                     </Select>
                   </FormControl>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                    Select multiple employees to add work entries for all of them with the same event and timings
+                  </Typography>
+                  {selectedEmployees.length > 0 && (
+                    <Box sx={{ mt: 1, p: 1, bgcolor: 'primary.light', borderRadius: 1 }}>
+                      <Typography variant="caption" color="white" sx={{ fontWeight: 'bold' }}>
+                        Selected: {selectedEmployees.map(id => {
+                          const emp = employees.find(e => e.id === id);
+                          return emp ? emp.name : '';
+                        }).join(', ')}
+                      </Typography>
+                    </Box>
+                  )}
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
                   <DatePicker
@@ -1039,8 +1294,21 @@ function AdminDashboard() {
                     </Select>
                   </FormControl>
                 </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <TextField
+                    label="Description"
+                    value={newEntry.description}
+                    onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
+                    fullWidth
+                    multiline
+                    rows={2}
+                    placeholder="Enter work description..."
+                  />
+                </Grid>
                 <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
-                  <Button variant="contained" onClick={handleAddEntry} sx={{ flex: 2 }}>Add Entry</Button>
+                  <Button variant="contained" onClick={handleAddEntry} sx={{ flex: 2 }}>
+                    {selectedEmployees.length > 1 ? `Add ${selectedEmployees.length} Entries` : 'Add Entry'}
+                  </Button>
                   <Button variant="outlined" onClick={handleResetNewEntry} sx={{ flex: 1 }}>Reset</Button>
                 </Grid>
               </Grid>
@@ -1142,11 +1410,12 @@ function AdminDashboard() {
                       <TableCell>Bills</TableCell>
                       <TableCell>Final Pay</TableCell>
                       <TableCell>Event</TableCell>
+                      <TableCell>Description</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredWorkEntries.map((entry) => (
+                    {paginatedWorkEntries.map((entry) => (
                       <TableRow key={entry.id}>
                         {editingEntryId === entry.id ? (
                           <>
@@ -1227,6 +1496,16 @@ function AdminDashboard() {
                               </FormControl>
                             </TableCell>
                             <TableCell>
+                              <TextField
+                                value={editedEntry.description || ''}
+                                onChange={(e) => setEditedEntry({ ...editedEntry, description: e.target.value })}
+                                fullWidth
+                                multiline
+                                rows={2}
+                                placeholder="Enter work description..."
+                              />
+                            </TableCell>
+                            <TableCell>
                               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
                                 <Button size="small" variant="contained" onClick={handleSaveEdit}>Save</Button>
                                 <Button size="small" variant="outlined" onClick={handleCancelEdit}>Cancel</Button>
@@ -1254,6 +1533,11 @@ function AdminDashboard() {
                             </TableCell>
                             <TableCell>{entry.event}</TableCell>
                             <TableCell>
+                              <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {entry.description || '-'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
                               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
                                 <Button size="small" variant="outlined" onClick={() => handleEditClick(entry)}>Edit</Button>
                                 <Button size="small" variant="outlined" color="error" onClick={() => handleDeleteClick(entry.id)}>Delete</Button>
@@ -1266,6 +1550,15 @@ function AdminDashboard() {
                   </TableBody>
                 </Table>
               </TableContainer>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                <Pagination
+                  count={Math.ceil(filteredWorkEntries.length / WORK_ENTRIES_PER_PAGE)}
+                  page={workEntriesPage}
+                  onChange={(_, value) => setWorkEntriesPage(value)}
+                  color="primary"
+                  size="small"
+                />
+              </Box>
             </Paper>
           </Grid>
         </Grid>
@@ -1313,6 +1606,91 @@ function AdminDashboard() {
         <DialogActions sx={{ p: { xs: 2, sm: 3 } }}>
           <Button onClick={handleCancelEventEdit}>Cancel</Button>
           <Button onClick={handleSaveEventEdit} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Payment Settlement Dialog */}
+      <Dialog open={settlementDialogOpen} onClose={handleCancelPaymentDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Settle Payment for {selectedEmployeeForPayment?.name}
+        </DialogTitle>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Employee Details Summary */}
+            <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Outstanding Balance
+              </Typography>
+              <Typography variant="h6" color="error.main">
+                ${selectedEmployeeForPayment?.outstanding.toFixed(2)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total Owed: ${selectedEmployeeForPayment?.totalOwed.toFixed(2)} | 
+                Already Paid: ${selectedEmployeeForPayment?.totalPaid.toFixed(2)}
+              </Typography>
+            </Box>
+
+            {/* Payment Amount */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+              <TextField
+                label="Payment Amount"
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                fullWidth
+                inputProps={{ step: "0.01", min: "0", max: selectedEmployeeForPayment?.outstanding }}
+                helperText={`Maximum: $${selectedEmployeeForPayment?.outstanding.toFixed(2)}`}
+              />
+              <Button 
+                variant="outlined" 
+                size="small"
+                onClick={() => setPaymentAmount(selectedEmployeeForPayment?.outstanding.toString())}
+              >
+                Full Amount
+              </Button>
+            </Box>
+
+            {/* Payment Date */}
+            <DatePicker
+              label="Payment Date"
+              value={paymentDate}
+              onChange={(date) => setPaymentDate(date)}
+              slotProps={{ textField: { fullWidth: true } }}
+            />
+
+            {/* Payment Description */}
+            <TextField
+              label="Description (optional)"
+              value={paymentDescription}
+              onChange={(e) => setPaymentDescription(e.target.value)}
+              fullWidth
+              multiline
+              rows={2}
+              placeholder="Payment settlement note..."
+            />
+
+            {/* Remaining Balance Preview */}
+            <Box sx={{ p: 2, borderRadius: 1 }}>
+              <Typography variant="subtitle2">
+                After Payment Remaining Balance:
+              </Typography>
+              <Typography variant="h6" color={calculateRemainingBalance() === 0 ? 'success.main' : 'warning.main'}>
+                ${calculateRemainingBalance().toFixed(2)}
+                {calculateRemainingBalance() === 0 && ' ✅ Fully Settled!'}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: { xs: 2, sm: 3 } }}>
+          <Button onClick={handleCancelPaymentDialog}>Cancel</Button>
+          <Button 
+            onClick={handlePaymentSettlement} 
+            variant="contained" 
+            color="primary"
+            disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}
+          >
+            Process Payment
+          </Button>
         </DialogActions>
       </Dialog>
 

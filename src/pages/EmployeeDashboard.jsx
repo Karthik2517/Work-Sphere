@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, Button, Box, FormControl, InputLabel, Select, MenuItem, Grid, Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, Button, Box, FormControl, InputLabel, Select, MenuItem, Grid, Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Pagination } from '@mui/material';
 import dayjs from 'dayjs';
-import { workEntriesApi, employeesApi, billsApi } from '../services/supabaseApi';
+import { workEntriesApi, employeesApi, billsApi, paymentsApi } from '../services/supabaseApi';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -27,7 +27,15 @@ function EmployeeDashboard() {
   const [editingBillId, setEditingBillId] = useState(null);
   const [editingBill, setEditingBill] = useState({ date: dayjs(), category: '', description: '', amount: '' });
   const [editBillDialogOpen, setEditBillDialogOpen] = useState(false);
+  const [payments, setPayments] = useState([]);
+  const [outstandingBalance, setOutstandingBalance] = useState(null);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const PAYMENTS_PER_PAGE = 5;
   const navigate = useNavigate();
+  const [workEntriesPage, setWorkEntriesPage] = useState(1);
+  const [billsPage, setBillsPage] = useState(1);
+  const WORK_ENTRIES_PER_PAGE = 5;
+  const BILLS_PER_PAGE = 5;
 
   // Check if user is authenticated and has access to this employee dashboard
   useEffect(() => {
@@ -89,6 +97,30 @@ function EmployeeDashboard() {
     fetchBills();
   }, [id, billsRefreshTrigger]);
 
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const paymentData = await paymentsApi.getByEmployee(parseInt(id));
+        setPayments(paymentData);
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+      }
+    };
+    fetchPayments();
+  }, [id]);
+
+  useEffect(() => {
+    const calculateOutstanding = async () => {
+      try {
+        const balance = await paymentsApi.calculateOutstanding(parseInt(id));
+        setOutstandingBalance(balance);
+      } catch (error) {
+        console.error('Error calculating outstanding balance:', error);
+      }
+    };
+    calculateOutstanding();
+  }, [id, employeeWorkEntries, employeeBills, payments]);
+
   const handleLogout = () => {
     navigate('/');
   };
@@ -114,12 +146,13 @@ function EmployeeDashboard() {
         description: newBill.description,
         amount: parseFloat(newBill.amount)
       };
+      console.log('Bill data being sent:', billData);
       await billsApi.create(billData);
       setOpenBillDialog(false);
       setNewBill({ date: dayjs(), category: '', description: '', amount: '' });
       setBillsRefreshTrigger(prevTrigger => prevTrigger + 1);
     } catch (error) {
-      alert('Error adding bill');
+      alert('Error adding bill: ' + (error.message || error));
     }
   };
 
@@ -155,7 +188,7 @@ function EmployeeDashboard() {
       setEditingBill({ date: dayjs(), category: '', description: '', amount: '' });
       setBillsRefreshTrigger(prevTrigger => prevTrigger + 1);
     } catch (error) {
-      alert('Error updating bill');
+      alert('Error updating bill: ' + (error.message || error));
     }
   };
 
@@ -246,6 +279,13 @@ function EmployeeDashboard() {
     });
   };
 
+  const paginatedPayments = payments.slice((paymentsPage - 1) * PAYMENTS_PER_PAGE, paymentsPage * PAYMENTS_PER_PAGE);
+
+  const filteredWorkEntries = getFilteredWorkEntries();
+  const paginatedWorkEntries = filteredWorkEntries.slice((workEntriesPage - 1) * WORK_ENTRIES_PER_PAGE, workEntriesPage * WORK_ENTRIES_PER_PAGE);
+  const filteredBills = getFilteredBills();
+  const paginatedBills = filteredBills.slice((billsPage - 1) * BILLS_PER_PAGE, billsPage * BILLS_PER_PAGE);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg">
@@ -294,6 +334,7 @@ function EmployeeDashboard() {
             <Tab label="Work Entries" />
             <Tab label="Bills" />
             <Tab label="Pay Breakdown" />
+            <Tab label="Payments & Balance" />
           </Tabs>
         </Box>
         {/* Work Entries Tab */}
@@ -339,7 +380,7 @@ function EmployeeDashboard() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {getFilteredWorkEntries().map((entry) => {
+                  {paginatedWorkEntries.map((entry) => {
                     const hours = parseFloat(calculateHours(entry.from_time, entry.to_time)) || 0;
                     const pay = hours * 10;
                     const bills = getTotalBillsForDate(entry.date);
@@ -362,6 +403,15 @@ function EmployeeDashboard() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Pagination
+                count={Math.ceil(filteredWorkEntries.length / WORK_ENTRIES_PER_PAGE)}
+                page={workEntriesPage}
+                onChange={(_, value) => setWorkEntriesPage(value)}
+                color="primary"
+                size="small"
+              />
+            </Box>
           </Box>
         )}
         {/* Bills Tab */}
@@ -406,7 +456,7 @@ function EmployeeDashboard() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {getFilteredBills().map((bill) => (
+                  {paginatedBills.map((bill) => (
                     <TableRow key={bill.id}>
                       <TableCell>{bill.date}</TableCell>
                       <TableCell>{bill.category}</TableCell>
@@ -425,6 +475,15 @@ function EmployeeDashboard() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Pagination
+                count={Math.ceil(filteredBills.length / BILLS_PER_PAGE)}
+                page={billsPage}
+                onChange={(_, value) => setBillsPage(value)}
+                color="primary"
+                size="small"
+              />
+            </Box>
             {selectedBillMonth && (
               <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
                 <Typography variant="h6">
@@ -642,6 +701,119 @@ function EmployeeDashboard() {
               </Box>
             ) : null}
           </Paper>
+        )}
+        {/* Payments & Balance Tab */}
+        {activeTab === 3 && (
+          <Box>
+            {/* Outstanding Balance Summary */}
+            {outstandingBalance && (
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Your Payment Summary
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
+                      <Typography variant="h6" color="white">
+                        ${outstandingBalance.totalOwed.toFixed(2)}
+                      </Typography>
+                      <Typography variant="caption" color="white">
+                        Total Pay
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+                      <Typography variant="h6" color="white">
+                        ${outstandingBalance.totalPaid.toFixed(2)}
+                      </Typography>
+                      <Typography variant="caption" color="white">
+                        Total Received
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={12} md={4}>
+                    <Box sx={{ textAlign: 'center', p: 2, bgcolor: outstandingBalance.outstanding > 0 ? '#ef5350' : 'success.main', borderRadius: 1 }}>
+                      <Typography variant="h6" color="white">
+                        {outstandingBalance.outstanding > 0 ? `$${outstandingBalance.outstanding.toFixed(2)}` : '✅ Settled'}
+                      </Typography>
+                      <Typography variant="caption" color="white">
+                        {outstandingBalance.outstanding > 0 ? 'Outstanding Balance' : 'Status'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+                
+                {/* Breakdown */}
+                <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Pay Breakdown:
+                  </Typography>
+                  <Typography variant="body2">
+                    Work Pay: ${outstandingBalance.totalWorkPay.toFixed(2)} + 
+                    Bills: ${outstandingBalance.totalBills.toFixed(2)} = 
+                    Total: ${outstandingBalance.totalOwed.toFixed(2)}
+                  </Typography>
+                </Box>
+              </Paper>
+            )}
+
+            {/* Payment History */}
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Payment History
+              </Typography>
+              
+              {payments.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography color="text.secondary">
+                    No payments received yet.
+                  </Typography>
+                </Box>
+              ) : (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Amount</TableCell>
+                        <TableCell>Description</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedPayments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell>
+                            {dayjs(payment.payment_date).format('MMM DD, YYYY')}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="subtitle2" color="success.main">
+                              +${parseFloat(payment.amount).toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {payment.description || 'Payment settlement'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+              
+              {payments.length > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Pagination
+                    count={Math.ceil(payments.length / PAYMENTS_PER_PAGE)}
+                    page={paymentsPage}
+                    onChange={(_, value) => setPaymentsPage(value)}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+              )}
+            </Paper>
+          </Box>
         )}
       </Container>
     </LocalizationProvider>

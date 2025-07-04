@@ -26,6 +26,7 @@ CREATE TABLE work_entries (
   from_time TIME,
   to_time TIME,
   event VARCHAR(255),
+  description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -119,17 +120,17 @@ INSERT INTO events (id, name) VALUES
 (9, 'Grad Party');
 
 -- Insert work entries data
-INSERT INTO work_entries (id, employee_id, date, day, hours, from_time, to_time, event) VALUES
-(1, 1, '2025-06-26', 'Thursday', 6.00, '11:00:00', '17:00:00', 'Wedding Decor'),
-(2, 2, '2025-06-26', 'Thursday', 14.00, '10:00:00', '00:00:00', 'Corporate Event Setup'),
-(3, 2, '2025-06-11', 'Monday', 5.00, '13:00:00', '18:00:00', 'reception'),
-(4, 1, '2025-06-04', 'Wednesday', 2.50, '13:30:00', '16:00:00', 'wedding'),
-(5, NULL, '2025-06-17', 'Tuesday', 23.00, '01:00:00', '00:00:00', ''),
-(6, 1, '2025-06-12', 'Thursday', 2.00, '14:00:00', '16:00:00', 'house warming'),
-(7, 3, '2025-05-14', 'Wednesday', 16.00, '00:00:00', '16:00:00', 'wedding'),
-(8, 3, '2025-05-19', 'Monday', 10.00, '03:00:00', '13:00:00', ''),
-(9, 4, '2025-06-28', 'Saturday', 5.00, '09:00:00', '14:00:00', 'house warming'),
-(10, 2, '2025-06-17', 'Tuesday', 8.00, '15:00:00', '23:00:00', 'Wedding Decor');
+INSERT INTO work_entries (id, employee_id, date, day, hours, from_time, to_time, event, description) VALUES
+(1, 1, '2025-06-26', 'Thursday', 6.00, '11:00:00', '17:00:00', 'Wedding Decor', ''),
+(2, 2, '2025-06-26', 'Thursday', 14.00, '10:00:00', '00:00:00', 'Corporate Event Setup', ''),
+(3, 2, '2025-06-11', 'Monday', 5.00, '13:00:00', '18:00:00', 'reception', ''),
+(4, 1, '2025-06-04', 'Wednesday', 2.50, '13:30:00', '16:00:00', 'wedding', ''),
+(5, NULL, '2025-06-17', 'Tuesday', 23.00, '01:00:00', '00:00:00', '', ''),
+(6, 1, '2025-06-12', 'Thursday', 2.00, '14:00:00', '16:00:00', 'house warming', ''),
+(7, 3, '2025-05-14', 'Wednesday', 16.00, '00:00:00', '16:00:00', 'wedding', ''),
+(8, 3, '2025-05-19', 'Monday', 10.00, '03:00:00', '13:00:00', '', ''),
+(9, 4, '2025-06-28', 'Saturday', 5.00, '09:00:00', '14:00:00', 'house warming', ''),
+(10, 2, '2025-06-17', 'Tuesday', 8.00, '15:00:00', '23:00:00', 'Wedding Decor', '');
 
 -- Reset sequences to continue from the highest ID
 SELECT setval('employees_id_seq', (SELECT MAX(id) FROM employees));
