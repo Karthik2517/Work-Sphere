@@ -36,6 +36,9 @@ function EmployeeDashboard() {
   const [billsPage, setBillsPage] = useState(1);
   const WORK_ENTRIES_PER_PAGE = 5;
   const BILLS_PER_PAGE = 5;
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
+  const [billWorkEntryId, setBillWorkEntryId] = useState(null);
+  const [billsForEntry, setBillsForEntry] = useState([]);
 
   // Check if user is authenticated and has access to this employee dashboard
   useEffect(() => {
@@ -78,7 +81,7 @@ function EmployeeDashboard() {
         }
         const hours = parseFloat(calculateHours(entry.from_time, entry.to_time)) || 0;
         const pay = hours * 10; // $10 per hour
-        const bills = getTotalBillsForDate(entry.date);
+        const bills = getTotalBillsForEntry(entry.id);
         monthlyData[month].hours += hours;
         monthlyData[month].pay += pay;
         monthlyData[month].bills += bills;
@@ -138,19 +141,25 @@ function EmployeeDashboard() {
   };
 
   const handleAddBill = async () => {
+    if (!employee || !employee.id || !billWorkEntryId) {
+      alert('Could not determine employee or shift for this bill.');
+      return;
+    }
     try {
-      const billData = {
-        employee_id: parseInt(id),
+      await billsApi.create({
+        employee_id: employee.id,
         date: newBill.date.format('YYYY-MM-DD'),
         category: newBill.category,
         description: newBill.description,
-        amount: parseFloat(newBill.amount)
-      };
-      console.log('Bill data being sent:', billData);
-      await billsApi.create(billData);
-      setOpenBillDialog(false);
+        amount: parseFloat(newBill.amount),
+        work_entry_id: billWorkEntryId,
+      });
+      const bills = await billsApi.getByWorkEntry(billWorkEntryId);
+      setBillsForEntry(bills);
       setNewBill({ date: dayjs(), category: '', description: '', amount: '' });
-      setBillsRefreshTrigger(prevTrigger => prevTrigger + 1);
+      const allBills = await billsApi.getByEmployee(employee.id);
+      setEmployeeBills(allBills);
+      setBillDialogOpen(false);
     } catch (error) {
       alert('Error adding bill: ' + (error.message || error));
     }
@@ -198,8 +207,10 @@ function EmployeeDashboard() {
     setEditingBill({ date: dayjs(), category: '', description: '', amount: '' });
   };
 
-  const getTotalBillsForDate = (date) => {
-    return employeeBills.filter(bill => bill.date === date).reduce((total, bill) => total + parseFloat(bill.amount), 0);
+  const getTotalBillsForEntry = (workEntryId) => {
+    return employeeBills
+      .filter(bill => bill.work_entry_id === workEntryId)
+      .reduce((total, bill) => total + parseFloat(bill.amount), 0);
   };
 
   const getFilteredBills = () => {
@@ -285,6 +296,13 @@ function EmployeeDashboard() {
   const paginatedWorkEntries = filteredWorkEntries.slice((workEntriesPage - 1) * WORK_ENTRIES_PER_PAGE, workEntriesPage * WORK_ENTRIES_PER_PAGE);
   const filteredBills = getFilteredBills();
   const paginatedBills = filteredBills.slice((billsPage - 1) * BILLS_PER_PAGE, billsPage * BILLS_PER_PAGE);
+
+  const handleOpenBillDialog = async (workEntryId) => {
+    setBillWorkEntryId(workEntryId);
+    setBillDialogOpen(true);
+    const bills = await billsApi.getByWorkEntry(workEntryId);
+    setBillsForEntry(bills);
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -377,13 +395,14 @@ function EmployeeDashboard() {
                     <TableCell>Pay</TableCell>
                     <TableCell>Bills</TableCell>
                     <TableCell>Final Pay</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {paginatedWorkEntries.map((entry) => {
                     const hours = parseFloat(calculateHours(entry.from_time, entry.to_time)) || 0;
                     const pay = hours * 10;
-                    const bills = getTotalBillsForDate(entry.date);
+                    const bills = getTotalBillsForEntry(entry.id);
                     const finalPay = pay + bills;
                     
                     return (
@@ -397,6 +416,15 @@ function EmployeeDashboard() {
                         <TableCell>${pay.toFixed(2)}</TableCell>
                         <TableCell>${bills.toFixed(2)}</TableCell>
                         <TableCell>${finalPay.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleOpenBillDialog(entry.id)}
+                          >
+                            Upload Bill
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -438,9 +466,6 @@ function EmployeeDashboard() {
                 </FormControl>
                 <Button variant="outlined" onClick={() => setSelectedBillMonth('')}>
                   Reset
-                </Button>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenBillDialog(true)}>
-                  Add Bill
                 </Button>
               </Box>
             </Box>
@@ -491,116 +516,6 @@ function EmployeeDashboard() {
                 </Typography>
               </Box>
             )}
-            <Dialog open={openBillDialog} onClose={() => setOpenBillDialog(false)} maxWidth="sm" fullWidth>
-              <DialogTitle>Add New Bill</DialogTitle>
-              <DialogContent>
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                  <Grid item xs={12}>
-                    <DatePicker
-                      label="Date"
-                      value={newBill.date}
-                      onChange={(date) => setNewBill({ ...newBill, date })}
-                      slotProps={{ textField: { fullWidth: true } }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel>Category</InputLabel>
-                      <Select
-                        value={newBill.category}
-                        label="Category"
-                        onChange={(e) => setNewBill({ ...newBill, category: e.target.value })}
-                      >
-                        <MenuItem value="Cab">Cab</MenuItem>
-                        <MenuItem value="Food">Food</MenuItem>
-                        <MenuItem value="Transport">Transport</MenuItem>
-                        <MenuItem value="Other">Other</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Description"
-                      value={newBill.description}
-                      onChange={(e) => setNewBill({ ...newBill, description: e.target.value })}
-                      multiline
-                      rows={2}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Amount"
-                      type="number"
-                      value={newBill.amount}
-                      onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })}
-                      inputProps={{ step: "0.01", min: "0" }}
-                    />
-                  </Grid>
-                </Grid>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setOpenBillDialog(false)}>Cancel</Button>
-                <Button onClick={handleAddBill} variant="contained">Add Bill</Button>
-              </DialogActions>
-            </Dialog>
-            
-            {/* Edit Bill Dialog */}
-            <Dialog open={editBillDialogOpen} onClose={handleCancelBillEdit} maxWidth="sm" fullWidth>
-              <DialogTitle>Edit Bill</DialogTitle>
-              <DialogContent>
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                  <Grid item xs={12}>
-                    <DatePicker
-                      label="Date"
-                      value={editingBill.date}
-                      onChange={(date) => setEditingBill({ ...editingBill, date })}
-                      slotProps={{ textField: { fullWidth: true } }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel>Category</InputLabel>
-                      <Select
-                        value={editingBill.category}
-                        label="Category"
-                        onChange={(e) => setEditingBill({ ...editingBill, category: e.target.value })}
-                      >
-                        <MenuItem value="Cab">Cab</MenuItem>
-                        <MenuItem value="Food">Food</MenuItem>
-                        <MenuItem value="Transport">Transport</MenuItem>
-                        <MenuItem value="Other">Other</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Description"
-                      value={editingBill.description}
-                      onChange={(e) => setEditingBill({ ...editingBill, description: e.target.value })}
-                      multiline
-                      rows={2}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Amount"
-                      type="number"
-                      value={editingBill.amount}
-                      onChange={(e) => setEditingBill({ ...editingBill, amount: e.target.value })}
-                      inputProps={{ step: "0.01", min: "0" }}
-                    />
-                  </Grid>
-                </Grid>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handleCancelBillEdit}>Cancel</Button>
-                <Button onClick={handleSaveBillEdit} variant="contained">Save Changes</Button>
-              </DialogActions>
-            </Dialog>
           </Box>
         )}
         {/* Monthly Summary Tab */}
@@ -816,6 +731,70 @@ function EmployeeDashboard() {
           </Box>
         )}
       </Container>
+      {/* Bill Upload Dialog */}
+      <Dialog open={billDialogOpen} onClose={() => setBillDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Upload Bill for Shift</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <DatePicker
+                label="Date"
+                value={newBill.date}
+                onChange={(date) => setNewBill({ ...newBill, date })}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={newBill.category}
+                  label="Category"
+                  onChange={(e) => setNewBill({ ...newBill, category: e.target.value })}
+                >
+                  <MenuItem value="Cab">Cab</MenuItem>
+                  <MenuItem value="Food">Food</MenuItem>
+                  <MenuItem value="Transport">Transport</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={newBill.description}
+                onChange={(e) => setNewBill({ ...newBill, description: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Amount"
+                type="number"
+                value={newBill.amount}
+                onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })}
+                inputProps={{ step: "0.01", min: "0" }}
+              />
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2">Bills for this shift:</Typography>
+            {billsForEntry.map(bill => (
+              <div key={bill.id}>
+                {bill.category}: ${bill.amount}
+                {bill.description ? ` (${bill.description})` : ''}
+              </div>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBillDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleAddBill} variant="contained">Add Bill</Button>
+        </DialogActions>
+      </Dialog>
     </LocalizationProvider>
   );
 }

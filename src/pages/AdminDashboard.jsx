@@ -73,6 +73,16 @@ function AdminDashboard() {
   const [workEntriesPage, setWorkEntriesPage] = useState(1);
   const WORK_ENTRIES_PER_PAGE = 5;
 
+  // --- Bill upload state ---
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
+  const [billWorkEntryId, setBillWorkEntryId] = useState(null);
+  const [newBill, setNewBill] = useState({ date: dayjs(), category: '', description: '', amount: '' });
+  const [billsForEntry, setBillsForEntry] = useState([]);
+
+  // --- Payment edit state ---
+  const [editPaymentDialogOpen, setEditPaymentDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+
   // Check if user is authenticated
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -598,12 +608,10 @@ function AdminDashboard() {
       
       for (const employee of employeeList) {
         const balanceData = await paymentsApi.calculateOutstanding(employee.id);
-        if (balanceData.outstanding > 0) {
-          balances.push({
-            ...employee,
-            ...balanceData
-          });
-        }
+        balances.push({
+          ...employee,
+          ...balanceData
+        });
       }
       
       // Sort by outstanding amount (highest first)
@@ -678,6 +686,77 @@ function AdminDashboard() {
   // Paginate filteredWorkEntries
   const paginatedWorkEntries = filteredWorkEntries.slice((workEntriesPage - 1) * WORK_ENTRIES_PER_PAGE, workEntriesPage * WORK_ENTRIES_PER_PAGE);
 
+  // --- Bill dialog handlers ---
+  const handleOpenBillDialog = async (workEntryId) => {
+    setBillWorkEntryId(workEntryId);
+    setBillDialogOpen(true);
+    const bills = await billsApi.getByWorkEntry(workEntryId);
+    setBillsForEntry(bills);
+  };
+  const handleAddBill = async () => {
+    const entry = workEntries.find(e => e.id === billWorkEntryId);
+    if (!entry || !entry.employee_id || !billWorkEntryId) {
+      alert('Could not determine employee or shift for this bill.');
+      return;
+    }
+    try {
+      await billsApi.create({
+        employee_id: entry.employee_id,
+        date: newBill.date.format('YYYY-MM-DD'),
+        category: newBill.category,
+        description: newBill.description,
+        amount: parseFloat(newBill.amount),
+        work_entry_id: billWorkEntryId,
+      });
+      const bills = await billsApi.getByWorkEntry(billWorkEntryId);
+      setBillsForEntry(bills);
+      setNewBill({ date: dayjs(), category: '', description: '', amount: '' });
+      setBillDialogOpen(false);
+    } catch (error) {
+      alert('Error adding bill: ' + (error.message || error));
+    }
+  };
+
+  // --- Edit payment handlers ---
+  const handleEditPayment = (payment) => {
+    setEditingPayment(payment);
+    setEditPaymentDialogOpen(true);
+  };
+  const handleSavePaymentEdit = async () => {
+    try {
+      await paymentsApi.update(editingPayment.id, {
+        amount: parseFloat(editingPayment.amount),
+        payment_date: editingPayment.payment_date,
+        description: editingPayment.description,
+      });
+      setEditPaymentDialogOpen(false);
+      setEditingPayment(null);
+      await fetchPayments();
+      await fetchOutstandingBalances();
+    } catch (error) {
+      alert('Error updating payment: ' + (error.message || error));
+    }
+  };
+
+  // Helper to get the most recent payment for an employee
+  const getLastPaymentForEmployee = (employeeId) => {
+    const employeePayments = payments
+      .filter(p => p.employee_id === employeeId)
+      .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
+    return employeePayments[0] || null;
+  };
+
+  const handleRollbackPayment = async (paymentId) => {
+    if (!window.confirm('Are you sure you want to rollback (delete) this settlement?')) return;
+    await paymentsApi.delete(paymentId);
+    await fetchPayments();
+    await fetchOutstandingBalances();
+  };
+
+  // Split outstandingBalances into outstanding and settled
+  const outstanding = outstandingBalances.filter(e => e.outstanding > 0);
+  const settled = outstandingBalances.filter(e => e.outstanding === 0);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -750,7 +829,7 @@ function AdminDashboard() {
                 }
               }}
             >
-              {showOutstandingBalances ? "Hide Balances" : "Outstanding Balances"}
+              {showOutstandingBalances ? "Hide Balances" : "Balances"}
             </Button>
             <Button 
               variant="outlined" 
@@ -1119,30 +1198,12 @@ function AdminDashboard() {
         {showOutstandingBalances && (
           <Grid item xs={12} sx={{ mb: 3 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-              <Typography variant="h6" gutterBottom sx={{ color: 'error.main' }}>
-                Outstanding Employee Balances
-              </Typography>
-              
-              {loadingBalances ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <Typography>Loading balances...</Typography>
-                </Box>
-              ) : outstandingBalances.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="h6" color="success.main">
-                    🎉 All employees are settled up! No outstanding balances.
-                  </Typography>
-                </Box>
-              ) : (
+              {outstanding.length > 0 && (
                 <>
-                  {/* Total Outstanding Summary */}
-                  <Box sx={{ mb: 3, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
-                    <Typography variant="h6" color="white">
-                      Total Outstanding Amount: ${getTotalOutstandingAmount()}
-                    </Typography>
-                  </Box>
-
-                  <TableContainer sx={{ overflowX: 'auto' }}>
+                  <Typography variant="subtitle1" sx={{ color: 'error.main', mt: 2, mb: 1 }}>
+                    Outstanding Balances
+                  </Typography>
+                  <TableContainer sx={{ overflowX: 'auto', mb: 3 }}>
                     <Table sx={{ minWidth: { xs: 600, sm: 800 } }}>
                       <TableHead>
                         <TableRow>
@@ -1154,7 +1215,7 @@ function AdminDashboard() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {outstandingBalances.map((employee) => (
+                        {outstanding.map((employee) => (
                           <TableRow key={employee.id}>
                             <TableCell>
                               <Typography variant="subtitle1" fontWeight="bold">
@@ -1185,6 +1246,92 @@ function AdminDashboard() {
                                 color="primary"
                                 size="small"
                                 onClick={() => handleOpenPaymentDialog(employee)}
+                                sx={{ mb: 1 }}
+                              >
+                                Settle Payment
+                              </Button>
+                              {(() => {
+                                const lastPayment = getLastPaymentForEmployee(employee.id);
+                                return lastPayment ? (
+                                  <>
+                                    <Button
+                                      variant="outlined"
+                                      color="secondary"
+                                      size="small"
+                                      sx={{ mt: 1, mr: 1 }}
+                                      onClick={() => handleEditPayment(lastPayment)}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="outlined"
+                                      color="error"
+                                      size="small"
+                                      sx={{ mt: 1 }}
+                                      onClick={() => handleRollbackPayment(lastPayment.id)}
+                                    >
+                                      Rollback
+                                    </Button>
+                                  </>
+                                ) : null;
+                              })()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </>
+              )}
+              {settled.length > 0 && (
+                <>
+                  <Typography variant="subtitle1" sx={{ color: 'success.main', mt: 2, mb: 1 }}>
+                    Settled Balances
+                  </Typography>
+                  <TableContainer sx={{ overflowX: 'auto', mb: 3 }}>
+                    <Table sx={{ minWidth: { xs: 600, sm: 800 } }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Employee Name</TableCell>
+                          <TableCell>Total Owed</TableCell>
+                          <TableCell>Total Paid</TableCell>
+                          <TableCell>Outstanding</TableCell>
+                          <TableCell>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {settled.map((employee) => (
+                          <TableRow key={employee.id}>
+                            <TableCell>
+                              <Typography variant="subtitle1" fontWeight="bold">
+                                {employee.name}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="primary">
+                                ${employee.totalOwed.toFixed(2)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                (Work: ${employee.totalWorkPay.toFixed(2)} + Bills: ${employee.totalBills.toFixed(2)})
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="success.main">
+                                ${employee.totalPaid.toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="subtitle1" fontWeight="bold" color="success.main">
+                                Settled
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="contained" 
+                                color="primary"
+                                size="small"
+                                onClick={() => handleOpenPaymentDialog(employee)}
+                                sx={{ mb: 1 }}
                               >
                                 Settle Payment
                               </Button>
@@ -1691,6 +1838,102 @@ function AdminDashboard() {
           >
             Process Payment
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bill Upload Dialog */}
+      <Dialog open={billDialogOpen} onClose={() => setBillDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Upload Bill for Shift</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <DatePicker
+                label="Date"
+                value={newBill.date}
+                onChange={(date) => setNewBill({ ...newBill, date })}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={newBill.category}
+                  label="Category"
+                  onChange={(e) => setNewBill({ ...newBill, category: e.target.value })}
+                >
+                  <MenuItem value="Cab">Cab</MenuItem>
+                  <MenuItem value="Food">Food</MenuItem>
+                  <MenuItem value="Transport">Transport</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={newBill.description}
+                onChange={(e) => setNewBill({ ...newBill, description: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Amount"
+                type="number"
+                value={newBill.amount}
+                onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })}
+                inputProps={{ step: "0.01", min: "0" }}
+              />
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2">Bills for this shift:</Typography>
+            {billsForEntry.map(bill => (
+              <div key={bill.id}>{bill.category}: ${bill.amount}</div>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBillDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleAddBill} variant="contained">Add Bill</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Payment Dialog */}
+      <Dialog open={editPaymentDialogOpen} onClose={() => setEditPaymentDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Settlement</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Amount"
+            type="number"
+            value={editingPayment?.amount || ''}
+            onChange={e => setEditingPayment({ ...editingPayment, amount: e.target.value })}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <DatePicker
+            label="Payment Date"
+            value={dayjs(editingPayment?.payment_date)}
+            onChange={date => setEditingPayment({ ...editingPayment, payment_date: date.format('YYYY-MM-DD') })}
+            slotProps={{ textField: { fullWidth: true } }}
+          />
+          <TextField
+            label="Description"
+            value={editingPayment?.description || ''}
+            onChange={e => setEditingPayment({ ...editingPayment, description: e.target.value })}
+            fullWidth
+            multiline
+            rows={2}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditPaymentDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSavePaymentEdit} variant="contained">Save</Button>
         </DialogActions>
       </Dialog>
 

@@ -206,6 +206,15 @@ export const billsApi = {
     const { error } = await supabase.from('bills').delete().eq('id', id);
     if (error) throw error;
     return true;
+  },
+  getByWorkEntry: async (workEntryId) => {
+    const { data, error } = await supabase
+      .from('bills')
+      .select('*')
+      .eq('work_entry_id', workEntryId)
+      .order('date', { ascending: false });
+    if (error) throw error;
+    return data;
   }
 };
 
