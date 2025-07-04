@@ -5,6 +5,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { TimePicker, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
 import { workEntriesApi, employeesApi, eventsApi, billsApi, paymentsApi } from '../services/supabaseApi';
 
 function AdminDashboard() {
@@ -82,6 +83,12 @@ function AdminDashboard() {
   // --- Payment edit state ---
   const [editPaymentDialogOpen, setEditPaymentDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
+
+  // --- Event grouping and export state ---
+  const [showGroupedView, setShowGroupedView] = useState(false);
+  const [groupedWorkEntries, setGroupedWorkEntries] = useState([]);
+  const [groupFilterEvent, setGroupFilterEvent] = useState('');
+  const [groupFilterDate, setGroupFilterDate] = useState('');
 
   // Check if user is authenticated
   useEffect(() => {
@@ -420,9 +427,9 @@ function AdminDashboard() {
 
   const filteredWorkEntries = workEntries.filter(entry => {
     const entryDate = dayjs(entry.date);
-    const matchesEmployee = appliedFilterEmployeeId ? entry.employee_id === appliedFilterEmployeeId : true;
-    const matchesMonth = appliedFilterMonth ? entryDate.format('MM') === appliedFilterMonth : true;
-    const matchesYear = appliedFilterYear ? entryDate.format('YYYY') === appliedFilterYear : true;
+    const matchesEmployee = filterEmployeeId ? entry.employee_id === filterEmployeeId : true;
+    const matchesMonth = filterMonth ? entryDate.format('MM') === filterMonth : true;
+    const matchesYear = filterYear ? entryDate.format('YYYY') === filterYear : true;
     return matchesEmployee && matchesMonth && matchesYear;
   }).sort((a, b) => b.id - a.id);
 
@@ -576,8 +583,8 @@ function AdminDashboard() {
     return payments.reduce((total, payment) => total + parseFloat(payment.totalPayment), 0).toFixed(2);
   };
 
-  const getTotalBillsForDate = (date, employeeId) => {
-    return bills.filter(bill => bill.date === date && bill.employee_id === employeeId).reduce((total, bill) => total + parseFloat(bill.amount), 0);
+  const getTotalBillsForEntry = (workEntryId) => {
+    return bills.filter(bill => bill.work_entry_id === workEntryId).reduce((total, bill) => total + parseFloat(bill.amount), 0);
   };
 
   const getTotalBillsForEmployee = (employeeId) => {
@@ -747,15 +754,125 @@ function AdminDashboard() {
   };
 
   const handleRollbackPayment = async (paymentId) => {
-    if (!window.confirm('Are you sure you want to rollback (delete) this settlement?')) return;
-    await paymentsApi.delete(paymentId);
-    await fetchPayments();
-    await fetchOutstandingBalances();
+    if (window.confirm('Are you sure you want to rollback this payment? This action cannot be undone.')) {
+      try {
+        await paymentsApi.delete(paymentId);
+        setPayments(payments.filter(p => p.id !== paymentId));
+        // Refresh outstanding balances
+        await fetchOutstandingBalances();
+        alert('Payment rolled back successfully!');
+      } catch (error) {
+        console.error('Error rolling back payment:', error);
+        alert('Error rolling back payment: ' + error.message);
+      }
+    }
   };
 
   // Split outstandingBalances into outstanding and settled
-  const outstanding = outstandingBalances.filter(e => e.outstanding > 0);
+  const outstanding = outstandingBalances.filter(e => e.outstanding !== 0);
   const settled = outstandingBalances.filter(e => e.outstanding === 0);
+
+  // Event grouping and export functions
+  const groupWorkEntriesByEventAndDate = () => {
+    const grouped = {};
+    
+    filteredWorkEntries.forEach(entry => {
+      const key = `${entry.event || 'No Event'}_${entry.date}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          event: entry.event || 'No Event',
+          date: entry.date,
+          day: entry.day,
+          entries: [],
+          totalHours: 0,
+          totalPay: 0,
+          totalBills: 0,
+          totalFinalPay: 0,
+          employeeCount: 0
+        };
+      }
+      
+      const hours = parseFloat(entry.hours) || 0;
+      const pay = hours * 10;
+      const bills = getTotalBillsForEntry(entry.id);
+      const finalPay = pay + bills;
+      
+      grouped[key].entries.push(entry);
+      grouped[key].totalHours += hours;
+      grouped[key].totalPay += pay;
+      grouped[key].totalBills += bills;
+      grouped[key].totalFinalPay += finalPay;
+      grouped[key].employeeCount = grouped[key].entries.length;
+    });
+    
+    return Object.values(grouped).sort((a, b) => {
+      // Sort by date first, then by event name
+      if (a.date !== b.date) {
+        return a.date.localeCompare(b.date);
+      }
+      return a.event.localeCompare(b.event);
+    });
+  };
+
+  const handleToggleGroupedView = () => {
+    setShowGroupedView(!showGroupedView);
+    if (!showGroupedView) {
+      const grouped = groupWorkEntriesByEventAndDate();
+      setGroupedWorkEntries(grouped);
+    }
+  };
+
+  const handleExportToExcel = () => {
+    if (!filterMonth || !filterYear) {
+      alert('Please select both month and year before exporting to Excel.');
+      return;
+    }
+    // Sheet 1: Filtered Work Entries (detailed)
+    const detailedData = filteredWorkEntries.map(entry => ({
+      'Employee': employees.find(emp => emp.id === entry.employee_id)?.name || entry.employee_id,
+      'Date': entry.date,
+      'Day': entry.day,
+      'From Time': entry.from_time ? formatTime(entry.from_time) : '',
+      'To Time': entry.to_time ? formatTime(entry.to_time) : '',
+      'Hours': entry.hours,
+      'Pay': `$${(parseFloat(entry.hours) * 10).toFixed(2)}`,
+      'Bills': `$${getTotalBillsForEntry(entry.id).toFixed(2)}`,
+      'Final Pay': `$${(parseFloat(entry.hours) * 10 + getTotalBillsForEntry(entry.id)).toFixed(2)}`,
+      'Event': entry.event || 'No Event',
+      'Description': entry.description || ''
+    }));
+
+    // Sheet 2: Grouped by Event and Date (summary)
+    const grouped = groupWorkEntriesByEventAndDate();
+    const groupedData = grouped.map(group => ({
+      'Event': group.event,
+      'Date': group.date,
+      'Day': group.day,
+      'Employee Count': group.employeeCount,
+      'Total Hours': group.totalHours.toFixed(2),
+      'Total Pay': `$${group.totalPay.toFixed(2)}`,
+      'Total Bills': `$${group.totalBills.toFixed(2)}`,
+      'Total Final Pay': `$${group.totalFinalPay.toFixed(2)}`,
+      'Employees': [...new Set(group.entries.map(entry =>
+        employees.find(emp => emp.id === entry.employee_id)?.name || entry.employee_id
+      ))].join(', ')
+    }));
+
+    const ws1 = XLSX.utils.json_to_sheet(detailedData);
+    const ws2 = XLSX.utils.json_to_sheet(groupedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws1, 'Work Entries');
+    XLSX.utils.book_append_sheet(wb, ws2, 'Grouped Summary');
+
+    const monthName = dayjs(`${filterYear}-${filterMonth}-01`).format('MMMM');
+    let fileName = `work_entries_${monthName}_${filterYear}`;
+    if (filterEmployeeId) {
+      const emp = employees.find(e => e.id === filterEmployeeId);
+      if (emp) fileName += `_${emp.name.replace(/\s+/g, '_')}`;
+    }
+    fileName += '.xlsx';
+    XLSX.writeFile(wb, fileName);
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -1210,7 +1327,7 @@ function AdminDashboard() {
                           <TableCell>Employee Name</TableCell>
                           <TableCell>Total Owed</TableCell>
                           <TableCell>Total Paid</TableCell>
-                          <TableCell>Outstanding</TableCell>
+                          <TableCell align="center">Outstanding</TableCell>
                           <TableCell>Actions</TableCell>
                         </TableRow>
                       </TableHead>
@@ -1235,10 +1352,10 @@ function AdminDashboard() {
                                 ${employee.totalPaid.toFixed(2)}
                               </Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="subtitle1" fontWeight="bold" color="error">
+                            <TableCell align="center">
+                              <span style={{ color: employee.outstanding > 0 ? '#d32f2f' : '#1976d2', fontWeight: 600 }}>
                                 ${employee.outstanding.toFixed(2)}
-                              </Typography>
+                              </span>
                             </TableCell>
                             <TableCell>
                               <Button 
@@ -1295,7 +1412,7 @@ function AdminDashboard() {
                           <TableCell>Employee Name</TableCell>
                           <TableCell>Total Owed</TableCell>
                           <TableCell>Total Paid</TableCell>
-                          <TableCell>Outstanding</TableCell>
+                          <TableCell align="center">Outstanding</TableCell>
                           <TableCell>Actions</TableCell>
                         </TableRow>
                       </TableHead>
@@ -1320,7 +1437,7 @@ function AdminDashboard() {
                                 ${employee.totalPaid.toFixed(2)}
                               </Typography>
                             </TableCell>
-                            <TableCell>
+                            <TableCell align="center">
                               <Typography variant="subtitle1" fontWeight="bold" color="success.main">
                                 Settled
                               </Typography>
@@ -1355,13 +1472,13 @@ function AdminDashboard() {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={4}>
                   <FormControl fullWidth>
-                    <InputLabel id="employee-select-label">Select Employees (Multiple)</InputLabel>
+                    <InputLabel id="employee-select-label">Select Employees</InputLabel>
                     <Select
                       labelId="employee-select-label"
                       id="employee-select"
                       multiple
                       value={selectedEmployees}
-                      label="Select Employees (Multiple)"
+                      label="Select Employees"
                       onChange={(e) => setSelectedEmployees(e.target.value)}
                       renderValue={(selected) => {
                         if (selected.length === 0) return 'Select employees...';
@@ -1379,9 +1496,6 @@ function AdminDashboard() {
                       ))}
                     </Select>
                   </FormControl>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                    Select multiple employees to add work entries for all of them with the same event and timings
-                  </Typography>
                   {selectedEmployees.length > 0 && (
                     <Box sx={{ mt: 1, p: 1, bgcolor: 'primary.light', borderRadius: 1 }}>
                       <Typography variant="caption" color="white" sx={{ fontWeight: 'bold' }}>
@@ -1462,40 +1576,35 @@ function AdminDashboard() {
             </Paper>
           </Grid>
 
-          {/* Filter Work Entries Section */}
+          {/* Work Entries Table Section */}
           <Grid item xs={12}>
-            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-              <Typography variant="h6" gutterBottom>Filter Work Entries</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth>
-                    <InputLabel id="filter-employee-label">Employee</InputLabel>
+            <Paper sx={{ p: { xs: 1, sm: 2 } }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" gutterBottom>Work Entries</Typography>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <FormControl size="small" sx={{ minWidth: 150 }}>
+                    <InputLabel id="work-entries-employee-label">Employee</InputLabel>
                     <Select
-                      labelId="filter-employee-label"
-                      id="filter-employee"
-                      label="Employee"
+                      labelId="work-entries-employee-label"
                       value={filterEmployeeId}
-                      onChange={(e) => setFilterEmployeeId(e.target.value)}
+                      label="Employee"
+                      onChange={e => setFilterEmployeeId(e.target.value)}
                     >
-                      <MenuItem value="">All Employees</MenuItem>
+                      <MenuItem value="">All</MenuItem>
                       {employees.filter(emp => emp.role !== 'admin').map(emp => (
                         <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth>
-                    <InputLabel id="filter-month-label">Month</InputLabel>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel id="work-entries-month-label">Month</InputLabel>
                     <Select
-                      labelId="filter-month-label"
-                      id="filter-month"
-                      label="Month"
+                      labelId="work-entries-month-label"
                       value={filterMonth}
-                      onChange={(e) => setFilterMonth(e.target.value)}
+                      label="Month"
+                      onChange={e => setFilterMonth(e.target.value)}
                     >
-                      <MenuItem value="">All Months</MenuItem>
+                      <MenuItem value="">All</MenuItem>
                       {[...Array(12).keys()].map(month => (
                         <MenuItem key={month + 1} value={String(month + 1).padStart(2, '0')}>
                           {dayjs().month(month).format('MMMM')}
@@ -1503,38 +1612,52 @@ function AdminDashboard() {
                       ))}
                     </Select>
                   </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth>
-                    <InputLabel id="filter-year-label">Year</InputLabel>
+                  <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <InputLabel id="work-entries-year-label">Year</InputLabel>
                     <Select
-                      labelId="filter-year-label"
-                      id="filter-year"
-                      label="Year"
+                      labelId="work-entries-year-label"
                       value={filterYear}
-                      onChange={(e) => setFilterYear(e.target.value)}
+                      label="Year"
+                      onChange={e => setFilterYear(e.target.value)}
                     >
-                      <MenuItem value="">All Years</MenuItem>
+                      <MenuItem value="">All</MenuItem>
                       {[...Array(5).keys()].map(i => {
-                        const year = dayjs().year() - 2 + i;
+                        const year = 2025 + i;
                         return <MenuItem key={year} value={String(year)}>{year}</MenuItem>;
                       })}
                     </Select>
                   </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
-                  <Button variant="contained" onClick={handleApplyFilter} fullWidth>Filter</Button>
-                  <Button variant="outlined" onClick={handleResetFilters} fullWidth>Reset</Button>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-
-          {/* Work Entries Table Section */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: { xs: 1, sm: 2 } }}>
-              <Typography variant="h6" gutterBottom>Work Entries</Typography>
+                  <Button 
+                    variant="outlined" 
+                    onClick={handleExportToExcel}
+                    size="small"
+                    sx={{
+                      border: '2px solid #556cd6',
+                      color: '#556cd6',
+                      background: 'white',
+                      '&:hover': {
+                        background: '#556cd6',
+                        color: 'white',
+                        border: '2px solid #556cd6'
+                      }
+                    }}
+                  >
+                    Export to Excel
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    size="small"
+                    onClick={() => {
+                      setFilterEmployeeId('');
+                      setFilterMonth('');
+                      setFilterYear('');
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </Box>
+              </Box>
               <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
                   <TableHead>
@@ -1618,10 +1741,10 @@ function AdminDashboard() {
                               ${(parseFloat(editedEntry.hours) * 10).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              ${getTotalBillsForDate(editedEntry.date, editedEntry.employee_id)}
+                              ${getTotalBillsForEntry(editedEntry.id)}
                             </TableCell>
                             <TableCell>
-                              ${(parseFloat(editedEntry.hours) * 10 + getTotalBillsForDate(editedEntry.date, editedEntry.employee_id)).toFixed(2)}
+                              ${(parseFloat(editedEntry.hours) * 10 + getTotalBillsForEntry(editedEntry.id)).toFixed(2)}
                             </TableCell>
                             <TableCell>
                               <FormControl fullWidth>
@@ -1673,10 +1796,10 @@ function AdminDashboard() {
                               ${(parseFloat(entry.hours) * 10).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              ${getTotalBillsForDate(entry.date, entry.employee_id)}
+                              ${getTotalBillsForEntry(entry.id)}
                             </TableCell>
                             <TableCell>
-                              ${(parseFloat(entry.hours) * 10 + getTotalBillsForDate(entry.date, entry.employee_id)).toFixed(2)}
+                              ${(parseFloat(entry.hours) * 10 + getTotalBillsForEntry(entry.id)).toFixed(2)}
                             </TableCell>
                             <TableCell>{entry.event}</TableCell>
                             <TableCell>
@@ -1936,7 +2059,6 @@ function AdminDashboard() {
           <Button onClick={handleSavePaymentEdit} variant="contained">Save</Button>
         </DialogActions>
       </Dialog>
-
     </LocalizationProvider>
   );
 }
