@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, TableSortLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, Pagination } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container, TextField, Button, Box, FormControl, InputLabel, Select, MenuItem, TableSortLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, Pagination, Tabs, Tab } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { TimePicker, DatePicker } from '@mui/x-date-pickers';
@@ -90,6 +90,9 @@ function AdminDashboard() {
   const [groupFilterEvent, setGroupFilterEvent] = useState('');
   const [groupFilterDate, setGroupFilterDate] = useState('');
 
+  // 1. Replace all show/hide section states with a single state:
+  const [activeSection, setActiveSection] = useState('workEntries');
+
   // Check if user is authenticated
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -106,6 +109,12 @@ function AdminDashboard() {
     fetchBills();
     fetchPayments();
   }, []);
+
+  useEffect(() => {
+    if (activeSection === 'balances') {
+      fetchOutstandingBalances();
+    }
+  }, [activeSection]);
 
   const fetchEvents = async () => {
     try {
@@ -580,7 +589,7 @@ function AdminDashboard() {
 
   const getTotalCompanyPayment = () => {
     const payments = calculateEmployeePayments();
-    return payments.reduce((total, payment) => total + parseFloat(payment.totalPayment), 0).toFixed(2);
+    return payments.reduce((total, payment) => total + (parseFloat(payment.totalPayment) + getTotalBillsForEmployee(payment.id)), 0).toFixed(2);
   };
 
   const getTotalBillsForEntry = (workEntryId) => {
@@ -904,49 +913,64 @@ function AdminDashboard() {
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
             <Button 
-              variant={showEmployeesEventsTab ? "contained" : "outlined"} 
-              onClick={() => setShowEmployeesEventsTab(!showEmployeesEventsTab)}
+              variant={activeSection === 'workEntries' ? "contained" : "outlined"}
+              onClick={() => setActiveSection('workEntries')}
               sx={{
-                background: showEmployeesEventsTab ? '#556cd6' : 'transparent',
+                background: activeSection === 'workEntries' ? '#556cd6' : 'transparent',
                 border: '2px solid rgba(85, 108, 214, 0.3)',
-                color: showEmployeesEventsTab ? 'white' : '#333',
+                color: activeSection === 'workEntries' ? 'white' : '#333',
                 '&:hover': {
-                  background: showEmployeesEventsTab ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  background: activeSection === 'workEntries' ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
                   border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
-              {showEmployeesEventsTab ? "Hide Employees & Events" : "Employees & Events"}
+              Work Entries
             </Button>
             <Button 
-              variant={showPaymentsTable ? "contained" : "outlined"} 
-              onClick={() => setShowPaymentsTable(!showPaymentsTable)}
+              variant={activeSection === 'employeesEvents' ? "contained" : "outlined"}
+              onClick={() => setActiveSection('employeesEvents')}
               sx={{
-                background: showPaymentsTable ? '#556cd6' : 'transparent',
+                background: activeSection === 'employeesEvents' ? '#556cd6' : 'transparent',
                 border: '2px solid rgba(85, 108, 214, 0.3)',
-                color: showPaymentsTable ? 'white' : '#333',
+                color: activeSection === 'employeesEvents' ? 'white' : '#333',
                 '&:hover': {
-                  background: showPaymentsTable ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  background: activeSection === 'employeesEvents' ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
                   border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
-              {showPaymentsTable ? "Hide Payments" : "Show Payments"}
+              Employees & Events
             </Button>
             <Button 
-              variant={showOutstandingBalances ? "contained" : "outlined"} 
-              onClick={handleShowOutstandingBalances}
+              variant={activeSection === 'payments' ? "contained" : "outlined"}
+              onClick={() => setActiveSection('payments')}
               sx={{
-                background: showOutstandingBalances ? '#d32f2f' : 'transparent',
+                background: activeSection === 'payments' ? '#556cd6' : 'transparent',
+                border: '2px solid rgba(85, 108, 214, 0.3)',
+                color: activeSection === 'payments' ? 'white' : '#333',
+                '&:hover': {
+                  background: activeSection === 'payments' ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  border: '2px solid rgba(85, 108, 214, 0.5)'
+                }
+              }}
+            >
+              Payments
+            </Button>
+            <Button 
+              variant={activeSection === 'balances' ? "contained" : "outlined"}
+              onClick={() => setActiveSection('balances')}
+              sx={{
+                background: activeSection === 'balances' ? '#d32f2f' : 'transparent',
                 border: '2px solid rgba(211, 47, 47, 0.3)',
-                color: showOutstandingBalances ? 'white' : '#333',
+                color: activeSection === 'balances' ? 'white' : '#333',
                 '&:hover': {
-                  background: showOutstandingBalances ? '#b71c1c' : 'rgba(211, 47, 47, 0.1)',
+                  background: activeSection === 'balances' ? '#b71c1c' : 'rgba(211, 47, 47, 0.1)',
                   border: '2px solid rgba(211, 47, 47, 0.5)'
                 }
               }}
             >
-              {showOutstandingBalances ? "Hide Balances" : "Balances"}
+              Balances
             </Button>
             <Button 
               variant="outlined" 
@@ -966,7 +990,7 @@ function AdminDashboard() {
         </Box>
 
         {/* All Employees Table Section */}
-        {showEmployeesEventsTab && (
+        {activeSection === 'employeesEvents' && (
           <Grid container spacing={3} sx={{ mb: 3 }}>
             {/* Employees Section */}
             <Grid item xs={12} md={6}>
@@ -1117,7 +1141,7 @@ function AdminDashboard() {
         )}
 
         {/* Payments Section */}
-        {showPaymentsTable && (
+        {activeSection === 'payments' && (
           <Grid item xs={12} sx={{ mb: 3 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>Employee Payments</Typography>
@@ -1171,7 +1195,7 @@ function AdminDashboard() {
                       >
                         <MenuItem value="">All Years</MenuItem>
                         {[...Array(5).keys()].map(i => {
-                          const year = dayjs().year() - 2 + i;
+                          const year = 2025 + i;
                           return <MenuItem key={year} value={String(year)}>{year}</MenuItem>;
                         })}
                       </Select>
@@ -1238,7 +1262,7 @@ function AdminDashboard() {
                           <TableCell>{payment.totalHours} hrs</TableCell>
                           <TableCell>$10.00/hr</TableCell>
                           <TableCell>
-                            <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                            <Typography variant="subtitle1" fontWeight="bold" style={{ color: 'black' }}>
                               ${payment.totalPayment}
                             </Typography>
                           </TableCell>
@@ -1288,7 +1312,7 @@ function AdminDashboard() {
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body1" fontWeight="bold" color="primary">
+                              <Typography variant="body1" fontWeight="bold" style={{ color: 'black' }}>
                                 ${(hours * 10).toFixed(2)}
                               </Typography>
                             </TableCell>
@@ -1296,7 +1320,7 @@ function AdminDashboard() {
                               ${getTotalBillsForEmployeeInMonth(parseInt(appliedPaymentFilterEmployee), month).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body1" fontWeight="bold" color="primary">
+                              <Typography variant="body1" fontWeight="bold" style={{ color: 'black' }}>
                                 ${(hours * 10 + getTotalBillsForEmployeeInMonth(parseInt(appliedPaymentFilterEmployee), month)).toFixed(2)}
                               </Typography>
                             </TableCell>
@@ -1312,7 +1336,7 @@ function AdminDashboard() {
         )}
 
         {/* Outstanding Balances Section */}
-        {showOutstandingBalances && (
+        {activeSection === 'balances' && (
           <Grid item xs={12} sx={{ mb: 3 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               {outstanding.length > 0 && (
@@ -1464,374 +1488,377 @@ function AdminDashboard() {
           </Grid>
         )}
 
-        <Grid container spacing={3}>
-          {/* Add New Work Entry Section */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-              <Typography variant="h6" gutterBottom>Add New Work Entry</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel id="employee-select-label">Select Employees</InputLabel>
-                    <Select
-                      labelId="employee-select-label"
-                      id="employee-select"
-                      multiple
-                      value={selectedEmployees}
-                      label="Select Employees"
-                      onChange={(e) => setSelectedEmployees(e.target.value)}
-                      renderValue={(selected) => {
-                        if (selected.length === 0) return 'Select employees...';
-                        if (selected.length === 1) {
-                          const emp = employees.find(e => e.id === selected[0]);
-                          return emp ? emp.name : '';
+        {/* 3. Wrap the Add New Work Entry and Work Entries Table sections in: */}
+        {activeSection === 'workEntries' && (
+          <>
+            {/* Add New Work Entry Section */}
+            <Grid item xs={12}>
+              <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+                <Typography variant="h6" gutterBottom>Add New Work Entry</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth>
+                      <InputLabel id="employee-select-label">Select Employees</InputLabel>
+                      <Select
+                        labelId="employee-select-label"
+                        id="employee-select"
+                        multiple
+                        value={selectedEmployees}
+                        label="Select Employees"
+                        onChange={(e) => setSelectedEmployees(e.target.value)}
+                        renderValue={(selected) => {
+                          if (selected.length === 0) return 'Select employees...';
+                          if (selected.length === 1) {
+                            const emp = employees.find(e => e.id === selected[0]);
+                            return emp ? emp.name : '';
+                          }
+                          return `${selected.length} employees selected`;
+                        }}
+                      >
+                        {employees.filter(emp => emp.role !== 'admin').map((emp) => (
+                          <MenuItem key={emp.id} value={emp.id}>
+                            {emp.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    {selectedEmployees.length > 0 && (
+                      <Box sx={{ mt: 1, p: 1, bgcolor: 'primary.light', borderRadius: 1 }}>
+                        <Typography variant="caption" color="white" sx={{ fontWeight: 'bold' }}>
+                          Selected: {selectedEmployees.map(id => {
+                            const emp = employees.find(e => e.id === id);
+                            return emp ? emp.name : '';
+                          }).join(', ')}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <DatePicker
+                      label="Date"
+                      value={newEntry.date ? dayjs(newEntry.date) : null}
+                      onChange={(newValue) => handleDateChange(newValue)}
+                      slotProps={{ textField: { fullWidth: true } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField label="Day" value={newEntry.day} InputProps={{ readOnly: true }} fullWidth />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TimePicker
+                      label="From Time"
+                      value={newEntry.from_time ? dayjs(newEntry.from_time, 'HH:mm') : null}
+                      onChange={(newValue) => handleTimeChange('from_time', newValue ? newValue.format('HH:mm') : '')}
+                      slotProps={{ textField: { fullWidth: true } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TimePicker
+                      label="To Time"
+                      value={newEntry.to_time ? dayjs(newEntry.to_time, 'HH:mm') : null}
+                      onChange={(newValue) => handleTimeChange('to_time', newValue ? newValue.format('HH:mm') : '')}
+                      slotProps={{ textField: { fullWidth: true } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField label="Hours" type="number" value={newEntry.hours} InputProps={{ readOnly: true }} fullWidth />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth>
+                      <InputLabel id="event-select-label">Event</InputLabel>
+                      <Select
+                        labelId="event-select-label"
+                        id="event-select"
+                        value={newEntry.event}
+                        label="Event"
+                        onChange={(e) => setNewEntry({ ...newEntry, event: e.target.value })}
+                      >
+                        {events.map((event) => (
+                          <MenuItem key={event.id} value={event.name}>
+                            {event.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Description"
+                      value={newEntry.description}
+                      onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
+                      fullWidth
+                      multiline
+                      rows={2}
+                      placeholder="Enter work description..."
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
+                    <Button variant="contained" onClick={handleAddEntry} sx={{ flex: 2 }}>
+                      {selectedEmployees.length > 1 ? `Add ${selectedEmployees.length} Entries` : 'Add Entry'}
+                    </Button>
+                    <Button variant="outlined" onClick={handleResetNewEntry} sx={{ flex: 1 }}>Reset</Button>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
+
+            {/* Work Entries Table Section */}
+            <Grid item xs={12}>
+              <Paper sx={{ p: { xs: 1, sm: 2 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6" gutterBottom>Work Entries</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <FormControl size="small" sx={{ minWidth: 150 }}>
+                      <InputLabel id="work-entries-employee-label">Employee</InputLabel>
+                      <Select
+                        labelId="work-entries-employee-label"
+                        value={filterEmployeeId}
+                        label="Employee"
+                        onChange={e => setFilterEmployeeId(e.target.value)}
+                      >
+                        <MenuItem value="">All</MenuItem>
+                        {employees.filter(emp => emp.role !== 'admin').map(emp => (
+                          <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <InputLabel id="work-entries-month-label">Month</InputLabel>
+                      <Select
+                        labelId="work-entries-month-label"
+                        value={filterMonth}
+                        label="Month"
+                        onChange={e => setFilterMonth(e.target.value)}
+                      >
+                        <MenuItem value="">All</MenuItem>
+                        {[...Array(12).keys()].map(month => (
+                          <MenuItem key={month + 1} value={String(month + 1).padStart(2, '0')}>
+                            {dayjs().month(month).format('MMMM')}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <InputLabel id="work-entries-year-label">Year</InputLabel>
+                      <Select
+                        labelId="work-entries-year-label"
+                        value={filterYear}
+                        label="Year"
+                        onChange={e => setFilterYear(e.target.value)}
+                      >
+                        <MenuItem value="">All</MenuItem>
+                        {[...Array(5).keys()].map(i => {
+                          const year = 2025 + i;
+                          return <MenuItem key={year} value={String(year)}>{year}</MenuItem>;
+                        })}
+                      </Select>
+                    </FormControl>
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleExportToExcel}
+                      size="small"
+                      sx={{
+                        border: '2px solid #556cd6',
+                        color: '#556cd6',
+                        background: 'white',
+                        '&:hover': {
+                          background: '#556cd6',
+                          color: 'white',
+                          border: '2px solid #556cd6'
                         }
-                        return `${selected.length} employees selected`;
                       }}
                     >
-                      {employees.filter(emp => emp.role !== 'admin').map((emp) => (
-                        <MenuItem key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  {selectedEmployees.length > 0 && (
-                    <Box sx={{ mt: 1, p: 1, bgcolor: 'primary.light', borderRadius: 1 }}>
-                      <Typography variant="caption" color="white" sx={{ fontWeight: 'bold' }}>
-                        Selected: {selectedEmployees.map(id => {
-                          const emp = employees.find(e => e.id === id);
-                          return emp ? emp.name : '';
-                        }).join(', ')}
-                      </Typography>
-                    </Box>
-                  )}
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <DatePicker
-                    label="Date"
-                    value={newEntry.date ? dayjs(newEntry.date) : null}
-                    onChange={(newValue) => handleDateChange(newValue)}
-                    slotProps={{ textField: { fullWidth: true } }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField label="Day" value={newEntry.day} InputProps={{ readOnly: true }} fullWidth />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TimePicker
-                    label="From Time"
-                    value={newEntry.from_time ? dayjs(newEntry.from_time, 'HH:mm') : null}
-                    onChange={(newValue) => handleTimeChange('from_time', newValue ? newValue.format('HH:mm') : '')}
-                    slotProps={{ textField: { fullWidth: true } }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TimePicker
-                    label="To Time"
-                    value={newEntry.to_time ? dayjs(newEntry.to_time, 'HH:mm') : null}
-                    onChange={(newValue) => handleTimeChange('to_time', newValue ? newValue.format('HH:mm') : '')}
-                    slotProps={{ textField: { fullWidth: true } }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField label="Hours" type="number" value={newEntry.hours} InputProps={{ readOnly: true }} fullWidth />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel id="event-select-label">Event</InputLabel>
-                    <Select
-                      labelId="event-select-label"
-                      id="event-select"
-                      value={newEntry.event}
-                      label="Event"
-                      onChange={(e) => setNewEntry({ ...newEntry, event: e.target.value })}
+                      Export to Excel
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      size="small"
+                      onClick={() => {
+                        setFilterEmployeeId('');
+                        setFilterMonth('');
+                        setFilterYear('');
+                      }}
                     >
-                      {events.map((event) => (
-                        <MenuItem key={event.id} value={event.name}>
-                          {event.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    label="Description"
-                    value={newEntry.description}
-                    onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
-                    fullWidth
-                    multiline
-                    rows={2}
-                    placeholder="Enter work description..."
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 1 }}>
-                  <Button variant="contained" onClick={handleAddEntry} sx={{ flex: 2 }}>
-                    {selectedEmployees.length > 1 ? `Add ${selectedEmployees.length} Entries` : 'Add Entry'}
-                  </Button>
-                  <Button variant="outlined" onClick={handleResetNewEntry} sx={{ flex: 1 }}>Reset</Button>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-
-          {/* Work Entries Table Section */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: { xs: 1, sm: 2 } }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" gutterBottom>Work Entries</Typography>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  <FormControl size="small" sx={{ minWidth: 150 }}>
-                    <InputLabel id="work-entries-employee-label">Employee</InputLabel>
-                    <Select
-                      labelId="work-entries-employee-label"
-                      value={filterEmployeeId}
-                      label="Employee"
-                      onChange={e => setFilterEmployeeId(e.target.value)}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      {employees.filter(emp => emp.role !== 'admin').map(emp => (
-                        <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel id="work-entries-month-label">Month</InputLabel>
-                    <Select
-                      labelId="work-entries-month-label"
-                      value={filterMonth}
-                      label="Month"
-                      onChange={e => setFilterMonth(e.target.value)}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      {[...Array(12).keys()].map(month => (
-                        <MenuItem key={month + 1} value={String(month + 1).padStart(2, '0')}>
-                          {dayjs().month(month).format('MMMM')}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <InputLabel id="work-entries-year-label">Year</InputLabel>
-                    <Select
-                      labelId="work-entries-year-label"
-                      value={filterYear}
-                      label="Year"
-                      onChange={e => setFilterYear(e.target.value)}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      {[...Array(5).keys()].map(i => {
-                        const year = 2025 + i;
-                        return <MenuItem key={year} value={String(year)}>{year}</MenuItem>;
-                      })}
-                    </Select>
-                  </FormControl>
-                  <Button 
-                    variant="outlined" 
-                    onClick={handleExportToExcel}
-                    size="small"
-                    sx={{
-                      border: '2px solid #556cd6',
-                      color: '#556cd6',
-                      background: 'white',
-                      '&:hover': {
-                        background: '#556cd6',
-                        color: 'white',
-                        border: '2px solid #556cd6'
-                      }
-                    }}
-                  >
-                    Export to Excel
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    size="small"
-                    onClick={() => {
-                      setFilterEmployeeId('');
-                      setFilterMonth('');
-                      setFilterYear('');
-                    }}
-                  >
-                    Reset
-                  </Button>
+                      Reset
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
-              <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell key="employee_id" sortDirection={orderBy === 'employee_id' ? order : false}>
-                        <TableSortLabel
-                          active={orderBy === 'employee_id'}
-                          direction={orderBy === 'employee_id' ? order : 'asc'}
-                          onClick={(event) => handleRequestSort(event, 'employee_id')}
-                        >
-                          Employee Name
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Day</TableCell>
-                      <TableCell>From Time</TableCell>
-                      <TableCell>To Time</TableCell>
-                      <TableCell>Hours</TableCell>
-                      <TableCell>Pay</TableCell>
-                      <TableCell>Bills</TableCell>
-                      <TableCell>Final Pay</TableCell>
-                      <TableCell>Event</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedWorkEntries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        {editingEntryId === entry.id ? (
-                          <>
-                            <TableCell>
-                              <FormControl fullWidth>
-                                <InputLabel id="employee-edit-select-label">Employee</InputLabel>
-                                <Select
-                                  labelId="employee-edit-select-label"
-                                  id="employee-edit-select"
-                                  value={editedEntry.employee_id}
-                                  label="Employee"
-                                  onChange={(e) => setEditedEntry({ ...editedEntry, employee_id: e.target.value })}
-                                >
-                                  {employees.filter(emp => emp.role !== 'admin').map((emp) => (
-                                    <MenuItem key={emp.id} value={emp.id}>
-                                      {emp.name}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </TableCell>
-                            <TableCell>
-                              <DatePicker
-                                label="Date"
-                                value={editedEntry.date ? dayjs(editedEntry.date) : null}
-                                onChange={(newValue) => handleDateChange(newValue, true)}
-                                slotProps={{ textField: { fullWidth: true } }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField value={editedEntry.day} InputProps={{ readOnly: true }} fullWidth />
-                            </TableCell>
-                            <TableCell>
-                              <TimePicker
-                                label="From Time"
-                                value={editedEntry.from_time ? dayjs(editedEntry.from_time, 'HH:mm') : null}
-                                onChange={(newValue) => handleTimeChange('from_time', newValue ? newValue.format('HH:mm') : '', true)}
-                                slotProps={{ textField: { fullWidth: true } }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TimePicker
-                                label="To Time"
-                                value={editedEntry.to_time ? dayjs(editedEntry.to_time, 'HH:mm') : null}
-                                onChange={(newValue) => handleTimeChange('to_time', newValue ? newValue.format('HH:mm') : '', true)}
-                                slotProps={{ textField: { fullWidth: true } }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField value={editedEntry.hours} InputProps={{ readOnly: true }} fullWidth />
-                            </TableCell>
-                            <TableCell>
-                              ${(parseFloat(editedEntry.hours) * 10).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              ${getTotalBillsForEntry(editedEntry.id)}
-                            </TableCell>
-                            <TableCell>
-                              ${(parseFloat(editedEntry.hours) * 10 + getTotalBillsForEntry(editedEntry.id)).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <FormControl fullWidth>
-                                <InputLabel id="event-edit-select-label">Event</InputLabel>
-                                <Select
-                                  labelId="event-edit-select-label"
-                                  id="event-edit-select"
-                                  value={editedEntry.event || ''}
-                                  label="Event"
-                                  onChange={(e) => setEditedEntry({ ...editedEntry, event: e.target.value })}
-                                >
-                                  <MenuItem value="">No Event</MenuItem>
-                                  {events.map((event) => (
-                                    <MenuItem key={event.id} value={event.name}>
-                                      {event.name}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                value={editedEntry.description || ''}
-                                onChange={(e) => setEditedEntry({ ...editedEntry, description: e.target.value })}
-                                fullWidth
-                                multiline
-                                rows={2}
-                                placeholder="Enter work description..."
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
-                                <Button size="small" variant="contained" onClick={handleSaveEdit}>Save</Button>
-                                <Button size="small" variant="outlined" onClick={handleCancelEdit}>Cancel</Button>
-                              </Box>
-                            </TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell>
-                              {employees.find(emp => emp.id === entry.employee_id)?.name || entry.employee_id}
-                            </TableCell>
-                            <TableCell>{entry.date}</TableCell>
-                            <TableCell>{entry.day}</TableCell>
-                            <TableCell>{entry.from_time ? formatTime(entry.from_time) : ''}</TableCell>
-                            <TableCell>{entry.to_time ? formatTime(entry.to_time) : ''}</TableCell>
-                            <TableCell>{entry.hours}</TableCell>
-                            <TableCell>
-                              ${(parseFloat(entry.hours) * 10).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              ${getTotalBillsForEntry(entry.id)}
-                            </TableCell>
-                            <TableCell>
-                              ${(parseFloat(entry.hours) * 10 + getTotalBillsForEntry(entry.id)).toFixed(2)}
-                            </TableCell>
-                            <TableCell>{entry.event}</TableCell>
-                            <TableCell>
-                              <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {entry.description || '-'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
-                                <Button size="small" variant="outlined" onClick={() => handleEditClick(entry)}>Edit</Button>
-                                <Button size="small" variant="outlined" color="error" onClick={() => handleDeleteClick(entry.id)}>Delete</Button>
-                              </Box>
-                            </TableCell>
-                          </>
-                        )}
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                  <Table sx={{ minWidth: { xs: 600, sm: 700 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell key="employee_id" sortDirection={orderBy === 'employee_id' ? order : false}>
+                          <TableSortLabel
+                            active={orderBy === 'employee_id'}
+                            direction={orderBy === 'employee_id' ? order : 'asc'}
+                            onClick={(event) => handleRequestSort(event, 'employee_id')}
+                          >
+                            Employee Name
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Day</TableCell>
+                        <TableCell>From Time</TableCell>
+                        <TableCell>To Time</TableCell>
+                        <TableCell>Hours</TableCell>
+                        <TableCell>Pay</TableCell>
+                        <TableCell>Bills</TableCell>
+                        <TableCell>Final Pay</TableCell>
+                        <TableCell>Event</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Pagination
-                  count={Math.ceil(filteredWorkEntries.length / WORK_ENTRIES_PER_PAGE)}
-                  page={workEntriesPage}
-                  onChange={(_, value) => setWorkEntriesPage(value)}
-                  color="primary"
-                  size="small"
-                />
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedWorkEntries.map((entry) => (
+                        <TableRow key={entry.id}>
+                          {editingEntryId === entry.id ? (
+                            <>
+                              <TableCell>
+                                <FormControl fullWidth>
+                                  <InputLabel id="employee-edit-select-label">Employee</InputLabel>
+                                  <Select
+                                    labelId="employee-edit-select-label"
+                                    id="employee-edit-select"
+                                    value={editedEntry.employee_id}
+                                    label="Employee"
+                                    onChange={(e) => setEditedEntry({ ...editedEntry, employee_id: e.target.value })}
+                                  >
+                                    {employees.filter(emp => emp.role !== 'admin').map((emp) => (
+                                      <MenuItem key={emp.id} value={emp.id}>
+                                        {emp.name}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </TableCell>
+                              <TableCell>
+                                <DatePicker
+                                  label="Date"
+                                  value={editedEntry.date ? dayjs(editedEntry.date) : null}
+                                  onChange={(newValue) => handleDateChange(newValue, true)}
+                                  slotProps={{ textField: { fullWidth: true } }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField value={editedEntry.day} InputProps={{ readOnly: true }} fullWidth />
+                              </TableCell>
+                              <TableCell>
+                                <TimePicker
+                                  label="From Time"
+                                  value={editedEntry.from_time ? dayjs(editedEntry.from_time, 'HH:mm') : null}
+                                  onChange={(newValue) => handleTimeChange('from_time', newValue ? newValue.format('HH:mm') : '', true)}
+                                  slotProps={{ textField: { fullWidth: true } }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TimePicker
+                                  label="To Time"
+                                  value={editedEntry.to_time ? dayjs(editedEntry.to_time, 'HH:mm') : null}
+                                  onChange={(newValue) => handleTimeChange('to_time', newValue ? newValue.format('HH:mm') : '', true)}
+                                  slotProps={{ textField: { fullWidth: true } }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField value={editedEntry.hours} InputProps={{ readOnly: true }} fullWidth />
+                              </TableCell>
+                              <TableCell>
+                                ${(parseFloat(editedEntry.hours) * 10).toFixed(2)}
+                              </TableCell>
+                              <TableCell>
+                                ${getTotalBillsForEntry(editedEntry.id)}
+                              </TableCell>
+                              <TableCell>
+                                ${(parseFloat(editedEntry.hours) * 10 + getTotalBillsForEntry(editedEntry.id)).toFixed(2)}
+                              </TableCell>
+                              <TableCell>
+                                <FormControl fullWidth>
+                                  <InputLabel id="event-edit-select-label">Event</InputLabel>
+                                  <Select
+                                    labelId="event-edit-select-label"
+                                    id="event-edit-select"
+                                    value={editedEntry.event || ''}
+                                    label="Event"
+                                    onChange={(e) => setEditedEntry({ ...editedEntry, event: e.target.value })}
+                                  >
+                                    <MenuItem value="">No Event</MenuItem>
+                                    {events.map((event) => (
+                                      <MenuItem key={event.id} value={event.name}>
+                                        {event.name}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editedEntry.description || ''}
+                                  onChange={(e) => setEditedEntry({ ...editedEntry, description: e.target.value })}
+                                  fullWidth
+                                  multiline
+                                  rows={2}
+                                  placeholder="Enter work description..."
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
+                                  <Button size="small" variant="contained" onClick={handleSaveEdit}>Save</Button>
+                                  <Button size="small" variant="outlined" onClick={handleCancelEdit}>Cancel</Button>
+                                </Box>
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell>
+                                {employees.find(emp => emp.id === entry.employee_id)?.name || entry.employee_id}
+                              </TableCell>
+                              <TableCell>{entry.date}</TableCell>
+                              <TableCell>{entry.day}</TableCell>
+                              <TableCell>{entry.from_time ? formatTime(entry.from_time) : ''}</TableCell>
+                              <TableCell>{entry.to_time ? formatTime(entry.to_time) : ''}</TableCell>
+                              <TableCell>{entry.hours}</TableCell>
+                              <TableCell>
+                                ${(parseFloat(entry.hours) * 10).toFixed(2)}
+                              </TableCell>
+                              <TableCell>
+                                ${getTotalBillsForEntry(entry.id)}
+                              </TableCell>
+                              <TableCell>
+                                ${(parseFloat(entry.hours) * 10 + getTotalBillsForEntry(entry.id)).toFixed(2)}
+                              </TableCell>
+                              <TableCell>{entry.event}</TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {entry.description || '-'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5 }}>
+                                  <Button size="small" variant="outlined" onClick={() => handleEditClick(entry)}>Edit</Button>
+                                  <Button size="small" variant="outlined" color="error" onClick={() => handleDeleteClick(entry.id)}>Delete</Button>
+                                </Box>
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Pagination
+                    count={Math.ceil(filteredWorkEntries.length / WORK_ENTRIES_PER_PAGE)}
+                    page={workEntriesPage}
+                    onChange={(_, value) => setWorkEntriesPage(value)}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+              </Paper>
+            </Grid>
+          </>
+        )}
       </Container>
 
       {/* Edit Employee Dialog */}
