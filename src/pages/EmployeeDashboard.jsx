@@ -422,7 +422,7 @@ function EmployeeDashboard() {
                             variant="outlined"
                             onClick={() => handleOpenBillDialog(entry.id)}
                           >
-                            Upload Bill
+                            Add Bill
                           </Button>
                         </TableCell>
                       </TableRow>
