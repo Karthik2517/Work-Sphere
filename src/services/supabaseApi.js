@@ -332,6 +332,14 @@ export const paymentsApi = {
   }
 };
 
+export const balancesApi = {
+  getAllOutstanding: async () => {
+    const { data, error } = await supabase.rpc('get_all_outstanding_balances');
+    if (error) throw error;
+    return data;
+  }
+};
+
 export default {
   workEntries: workEntriesApi,
   bills: billsApi,

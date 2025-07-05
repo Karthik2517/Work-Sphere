@@ -6,7 +6,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { TimePicker, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
-import { workEntriesApi, employeesApi, eventsApi, billsApi, paymentsApi } from '../services/supabaseApi';
+import { workEntriesApi, employeesApi, eventsApi, billsApi, paymentsApi, balancesApi } from '../services/supabaseApi';
 
 function AdminDashboard() {
   const [workEntries, setWorkEntries] = useState([]);
@@ -34,7 +34,6 @@ function AdminDashboard() {
   const navigate = useNavigate();
 
   // New state for employees management
-  const [showEmployeesEventsTab, setShowEmployeesEventsTab] = useState(false);
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
   const [editedEmployee, setEditedEmployee] = useState({ name: '', password: '', role: 'employee' });
   const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
@@ -45,7 +44,6 @@ function AdminDashboard() {
   const [editEventDialogOpen, setEditEventDialogOpen] = useState(false);
 
   // New state for payments
-  const [showPaymentsTable, setShowPaymentsTable] = useState(false);
   const [paymentFilterMonth, setPaymentFilterMonth] = useState('');
   const [paymentFilterYear, setPaymentFilterYear] = useState('');
   const [paymentFilterEmployee, setPaymentFilterEmployee] = useState('');
@@ -54,7 +52,6 @@ function AdminDashboard() {
   const [appliedPaymentFilterEmployee, setAppliedPaymentFilterEmployee] = useState('');
 
   // New state for outstanding balances
-  const [showOutstandingBalances, setShowOutstandingBalances] = useState(false);
   const [outstandingBalances, setOutstandingBalances] = useState([]);
   const [payments, setPayments] = useState([]);
   const [settlementDialogOpen, setSettlementDialogOpen] = useState(false);
@@ -619,31 +616,12 @@ function AdminDashboard() {
   const fetchOutstandingBalances = async () => {
     setLoadingBalances(true);
     try {
-      const balances = [];
-      const employeeList = employees.filter(emp => emp.role !== 'admin');
-      
-      for (const employee of employeeList) {
-        const balanceData = await paymentsApi.calculateOutstanding(employee.id);
-        balances.push({
-          ...employee,
-          ...balanceData
-        });
-      }
-      
-      // Sort by outstanding amount (highest first)
-      balances.sort((a, b) => b.outstanding - a.outstanding);
+      const balances = await balancesApi.getAllOutstanding();
       setOutstandingBalances(balances);
     } catch (error) {
       console.error('Error fetching outstanding balances:', error);
     } finally {
       setLoadingBalances(false);
-    }
-  };
-
-  const handleShowOutstandingBalances = () => {
-    setShowOutstandingBalances(!showOutstandingBalances);
-    if (!showOutstandingBalances) {
-      fetchOutstandingBalances();
     }
   };
 
@@ -899,18 +877,26 @@ function AdminDashboard() {
           borderRadius: 3,
           color: '#333'
         }}>
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            sx={{ 
-              textAlign: { xs: 'center', sm: 'left' },
-              fontWeight: 700,
-              letterSpacing: '0.5px',
-              color: '#333'
-            }}
-          >
-            Admin Dashboard
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <svg width="34" height="34" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="16" fill="#556cd6"/>
+              <circle cx="16" cy="16" r="11" fill="white" fillOpacity="0.1"/>
+              <path d="M16 8.5V16L20 19.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="16" cy="16" r="0.85" fill="white"/>
+            </svg>
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              sx={{ 
+                textAlign: { xs: 'center', sm: 'left' },
+                fontWeight: 700,
+                letterSpacing: '0.5px',
+                color: '#333'
+              }}
+            >
+              Admin Dashboard
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
             <Button 
               variant={activeSection === 'workEntries' ? "contained" : "outlined"}
@@ -961,12 +947,12 @@ function AdminDashboard() {
               variant={activeSection === 'balances' ? "contained" : "outlined"}
               onClick={() => setActiveSection('balances')}
               sx={{
-                background: activeSection === 'balances' ? '#d32f2f' : 'transparent',
-                border: '2px solid rgba(211, 47, 47, 0.3)',
+                background: activeSection === 'balances' ? '#556cd6' : 'transparent',
+                border: '2px solid rgba(85, 108, 214, 0.3)',
                 color: activeSection === 'balances' ? 'white' : '#333',
                 '&:hover': {
-                  background: activeSection === 'balances' ? '#b71c1c' : 'rgba(211, 47, 47, 0.1)',
-                  border: '2px solid rgba(211, 47, 47, 0.5)'
+                  background: activeSection === 'balances' ? '#4a5cb8' : 'rgba(85, 108, 214, 0.1)',
+                  border: '2px solid rgba(85, 108, 214, 0.5)'
                 }
               }}
             >
@@ -976,11 +962,14 @@ function AdminDashboard() {
               variant="outlined" 
               onClick={handleLogout}
               sx={{
-                border: '2px solid rgba(85, 108, 214, 0.3)',
-                color: '#333',
+                background: 'transparent',
+                border: '2px solid #ef5350',
+                color: 'black',
+                fontWeight: 600,
                 '&:hover': {
-                  background: 'rgba(85, 108, 214, 0.1)',
-                  border: '2px solid rgba(85, 108, 214, 0.5)'
+                  background: '#ef5350',
+                  color: 'white',
+                  border: '2px solid #ef5350'
                 }
               }}
             >
@@ -1357,23 +1346,23 @@ function AdminDashboard() {
                       </TableHead>
                       <TableBody>
                         {outstanding.map((employee) => (
-                          <TableRow key={employee.id}>
+                          <TableRow key={employee.emp_id}>
                             <TableCell>
                               <Typography variant="subtitle1" fontWeight="bold">
-                                {employee.name}
+                                {employee.emp_name}
                               </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="primary">
-                                ${employee.totalOwed.toFixed(2)}
+                                ${employee.total_owed.toFixed(2)}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                (Work: ${employee.totalWorkPay.toFixed(2)} + Bills: ${employee.totalBills.toFixed(2)})
+                                (Work: ${employee.total_work_pay.toFixed(2)} + Bills: ${employee.total_bills.toFixed(2)})
                               </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="success.main">
-                                ${employee.totalPaid.toFixed(2)}
+                                ${employee.total_paid.toFixed(2)}
                               </Typography>
                             </TableCell>
                             <TableCell align="center">
@@ -1392,7 +1381,7 @@ function AdminDashboard() {
                                 Settle Payment
                               </Button>
                               {(() => {
-                                const lastPayment = getLastPaymentForEmployee(employee.id);
+                                const lastPayment = getLastPaymentForEmployee(employee.emp_id);
                                 return lastPayment ? (
                                   <>
                                     <Button
@@ -1442,23 +1431,23 @@ function AdminDashboard() {
                       </TableHead>
                       <TableBody>
                         {settled.map((employee) => (
-                          <TableRow key={employee.id}>
+                          <TableRow key={employee.emp_id}>
                             <TableCell>
                               <Typography variant="subtitle1" fontWeight="bold">
-                                {employee.name}
+                                {employee.emp_name}
                               </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="primary">
-                                ${employee.totalOwed.toFixed(2)}
+                                ${employee.total_owed.toFixed(2)}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                (Work: ${employee.totalWorkPay.toFixed(2)} + Bills: ${employee.totalBills.toFixed(2)})
+                                (Work: ${employee.total_work_pay.toFixed(2)} + Bills: ${employee.total_bills.toFixed(2)})
                               </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="success.main">
-                                ${employee.totalPaid.toFixed(2)}
+                                ${employee.total_paid.toFixed(2)}
                               </Typography>
                             </TableCell>
                             <TableCell align="center">
@@ -1922,8 +1911,8 @@ function AdminDashboard() {
                 ${selectedEmployeeForPayment?.outstanding.toFixed(2)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Total Owed: ${selectedEmployeeForPayment?.totalOwed.toFixed(2)} | 
-                Already Paid: ${selectedEmployeeForPayment?.totalPaid.toFixed(2)}
+                Total Owed: ${selectedEmployeeForPayment?.total_owed.toFixed(2)} | 
+                Already Paid: ${selectedEmployeeForPayment?.total_paid.toFixed(2)}
               </Typography>
             </Box>
 
