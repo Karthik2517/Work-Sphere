@@ -636,10 +636,10 @@ function AdminDashboard() {
   const handlePaymentSettlement = async () => {
     try {
       const paymentData = {
-        employee_id: selectedEmployeeForPayment.id,
+        employee_id: selectedEmployeeForPayment.emp_id,
         amount: parseFloat(paymentAmount),
         payment_date: paymentDate.format('YYYY-MM-DD'),
-        description: paymentDescription || `Payment settlement for ${selectedEmployeeForPayment.name}`
+        description: paymentDescription || `Payment settlement for ${selectedEmployeeForPayment.emp_name}`
       };
       
       await paymentsApi.create(paymentData);
@@ -1898,7 +1898,7 @@ function AdminDashboard() {
       {/* Payment Settlement Dialog */}
       <Dialog open={settlementDialogOpen} onClose={handleCancelPaymentDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
-          Settle Payment for {selectedEmployeeForPayment?.name}
+          Settle Payment for {selectedEmployeeForPayment?.emp_name}
         </DialogTitle>
         <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
